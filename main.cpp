@@ -111,7 +111,7 @@ public:
 
                 //adding leaf out from internal node
                 //split->children.emplace_back(Node(vector<Node>(), root, position, leafEnd, -1));
-                split->children.insert(Node(map<char, Node>(), root, position, END, -1));
+                split->children[text[position]] = Node(map<char, Node>(), root, position, END, -1);
                 next->first += activeLength;
                 split->children[text[next->first]] = *next;
 
