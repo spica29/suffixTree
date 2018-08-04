@@ -55,7 +55,7 @@ class SuffixTree {
     }*/
 
 public:
-    SuffixTree() : internalNode(NULL), activeNode(root), activeEdge(-1), activeLength(0), remainingSuffixCount(0), END(new int(0)) {}
+    SuffixTree() : internalNode(NULL), activeNode(root), activeEdge(-1), activeLength(0), remainingSuffixCount(0), END(0) {}
     void extension(int position, string text) {
         //extension rule 1
         this->END = &position;
@@ -70,12 +70,12 @@ public:
                 activeEdge = position; //position of character in string
             }
 
-            Node *next = &activeNode->children[text[activeEdge]];
+
             //there does not exist edge going out from activeNode starting with activeEdge
-            if(next == nullptr) {
+            if(activeNode->children.find(text[activeEdge - 1]) == activeNode->children.end()) {
                 //extension rule 2
                 //create new leaf edge
-                activeNode->children[text[activeEdge]] = Node(map<char, Node>(), root, position, END, -1);
+                activeNode->children[text[activeEdge - 1]] = Node(map<char, Node>(), root, position, END, -1);
                 //check suffix Link
                 if(internalNode != NULL){
                     internalNode->suffixLink = activeNode;
@@ -84,6 +84,7 @@ public:
             }
             // edge exists
             else {
+                Node *next = &activeNode->children[text[activeEdge - 1]];
                 //walk down
                 if(walkDown(*next)){
                     continue;
@@ -107,11 +108,11 @@ public:
 
                 //new internal node
                 Node *split = new Node(map<char, Node>(), root, next->first, splitEnd, -1);
-                activeNode->children[text[activeEdge]] = *split;
+                activeNode->children[text[activeEdge - 1]] = *split;
 
                 //adding leaf out from internal node
                 //split->children.emplace_back(Node(vector<Node>(), root, position, leafEnd, -1));
-                split->children[text[position]] = Node(map<char, Node>(), root, position, END, -1);
+                split->children[text[position - 1]] = Node(map<char, Node>(), root, position, END, -1);
                 next->first += activeLength;
                 split->children[text[next->first]] = *next;
 
