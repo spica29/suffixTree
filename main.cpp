@@ -38,21 +38,21 @@ class SuffixTree {
     int remainingSuffixCount;
     int *END;
     //returns true if first index is contained in vector of Nodes children
-    const pair<const char, Node> activeEdgePresentInTree(map<char, Node> &children, int _activeEdge, string text) {
-        for (auto const& key : children) {
-            int firstIndex = key.first;
+    /*Node* activeEdgePresentInTree(map<char, Node> *children, int _activeEdge, string text) {
+        for (auto const& node : *children) {
+            int firstIndex = node.second.first;
             for(int j = 1; j <= firstIndex; j++) {
                 //cout << "text char: " << text[j-1] << " activeEdge char: " << text[_activeEdge - 1] << endl;
                 if(text[j - 1] == text[_activeEdge - 1]){
                     //cout << "IN";
                     //cout << "j: " << j << "i: " << i;
                     //cout << children.at(key);
-                    return key;
+                    return &children->at(node.first);
                 }
             }
         }
         return nullptr;
-    }
+    }*/
 
 public:
     SuffixTree() : internalNode(NULL), activeNode(root), activeEdge(-1), activeLength(0), remainingSuffixCount(0), END(new int(0)) {}
@@ -70,12 +70,12 @@ public:
                 activeEdge = position; //position of character in string
             }
 
-            Node *next = activeEdgePresentInTree(activeNode->children, activeEdge, text);
+            Node *next = &activeNode->children[text[activeEdge]];
             //there does not exist edge going out from activeNode starting with activeEdge
             if(next == nullptr) {
                 //extension rule 2
                 //create new leaf edge
-                activeNode->children.insert(Node(map<char, Node>(), root, position, END, -1));
+                activeNode->children[text[activeEdge]] = Node(map<char, Node>(), root, position, END, -1);
                 //check suffix Link
                 if(internalNode != NULL){
                     internalNode->suffixLink = activeNode;
