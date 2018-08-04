@@ -7,7 +7,7 @@ using namespace std;
 class SuffixTree {
     struct Node {
         //list of children
-        map<char, Node> children;
+        map<char, Node*> children;
 
         //pointer to other node via suffix link
         Node *suffixLink;
@@ -19,8 +19,8 @@ class SuffixTree {
         // For non-leaf node, it will be -1.
         int suffixIndex;
 
-        Node() : children(map<char, Node>()), suffixLink(0), first(0), last(0), suffixIndex(-1) {};
-        Node(map<char, Node> _children, Node *_suffixLink, int _first, int *_last, int _suffixIndex)
+        Node() : children(map<char, Node*>()), suffixLink(0), first(0), last(0), suffixIndex(-1) {};
+        Node(map<char, Node*> _children, Node *_suffixLink, int _first, int *_last, int _suffixIndex)
         : children(_children), suffixLink(_suffixLink), first(_first), last(_last), suffixIndex(_suffixIndex) {};
 
     };
@@ -75,7 +75,7 @@ public:
             if(activeNode->children.find(text[activeEdge - 1]) == activeNode->children.end()) {
                 //extension rule 2
                 //create new leaf edge
-                activeNode->children[text[activeEdge - 1]] = Node(map<char, Node>(), root, position, END, -1);
+                activeNode->children[text[activeEdge - 1]] = new Node(map<char, Node*>(), root, position, END, -1);
                 //check suffix Link
                 if(internalNode != NULL){
                     internalNode->suffixLink = activeNode;
@@ -84,7 +84,7 @@ public:
             }
             // edge exists
             else {
-                Node *next = &activeNode->children[text[activeEdge - 1]];
+                Node *next = activeNode->children[text[activeEdge - 1]];
                 //walk down
                 if(walkDown(*next)){
                     continue;
@@ -107,14 +107,15 @@ public:
                 splitEnd = new int(next->first + activeLength - 1);
 
                 //new internal node
-                Node *split = new Node(map<char, Node>(), root, next->first, splitEnd, -1);
-                activeNode->children[text[activeEdge - 1]] = *split;
+                Node *split = new Node(map<char, Node*>(), root, next->first, splitEnd, -1);
+                activeNode->children[text[activeEdge - 1]] = split;
 
                 //adding leaf out from internal node
                 //split->children.emplace_back(Node(vector<Node>(), root, position, leafEnd, -1));
-                split->children[text[position - 1]] = Node(map<char, Node>(), root, position, END, -1);
+                split->children[text[position - 1]] = new Node(map<char, Node*>(), root, position, END, -1);
                 next->first += activeLength;
-                split->children[text[next->first]] = *next;
+                //need to update map char !!!
+                split->children[text[next->first]] = next;
 
                 //add suffix link
                 if(internalNode != NULL){
@@ -171,7 +172,7 @@ public:
                 //Current node is not a leaf as it has outgoing
                 //edges from it.
                 leaf = 0;
-                setSuffixIndexByDFS(&n->children[i], labelHeight + edgeLength(&n->children[i]), text);
+                setSuffixIndexByDFS(n->children[i], labelHeight + edgeLength(n->children[i]), text);
             }
         }
         if (leaf == 1)
@@ -190,7 +191,7 @@ public:
         {
             if (&n->children[i] != NULL)
             {
-                freeSuffixTreeByPostOrder(&n->children[i], text);
+                freeSuffixTreeByPostOrder(n->children[i], text);
             }
         }
         if (n->suffixIndex == -1)
