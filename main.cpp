@@ -37,37 +37,21 @@ class SuffixTree {
     //remainingSuffixCount - how many suffixed to be add in tree (explicitly)
     int remainingSuffixCount;
     int *END;
-    //returns true if first index is contained in vector of Nodes children
-    /*Node* activeEdgePresentInTree(map<char, Node> *children, int _activeEdge, string text) {
-        for (auto const& node : *children) {
-            int firstIndex = node.second.first;
-            for(int j = 1; j <= firstIndex; j++) {
-                //cout << "text char: " << text[j-1] << " activeEdge char: " << text[_activeEdge - 1] << endl;
-                if(text[j - 1] == text[_activeEdge - 1]){
-                    //cout << "IN";
-                    //cout << "j: " << j << "i: " << i;
-                    //cout << children.at(key);
-                    return &children->at(node.first);
-                }
-            }
-        }
-        return nullptr;
-    }*/
 
 public:
-    SuffixTree() : internalNode(NULL), activeNode(root), activeEdge(-1), activeLength(0), remainingSuffixCount(0), END(0) {}
-    void extension(int position, string text) {
+    SuffixTree() : internalNode(nullptr), activeNode(root), activeEdge(-1), activeLength(0), remainingSuffixCount(0), END(0) {}
+    void extension(int *position, string text) {
         //extension rule 1
-        this->END = &position;
+        this->END = position;
         //increase remainingSuffixCount
         remainingSuffixCount++;
         //when starting new phase no internal node is waiting for it's suffix link update in current phase
-        internalNode = NULL;
+        internalNode = nullptr;
 
         while(remainingSuffixCount > 0) {
             //APCFALZ
             if(activeLength == 0){
-                activeEdge = position; //position of character in string
+                activeEdge = *position; //position of character in string
             }
 
 
@@ -75,11 +59,11 @@ public:
             if(activeNode->children.find(text[activeEdge - 1]) == activeNode->children.end()) {
                 //extension rule 2
                 //create new leaf edge
-                activeNode->children[text[activeEdge - 1]] = new Node(map<char, Node*>(), root, position, END, -1);
+                activeNode->children[text[activeEdge - 1]] = new Node(map<char, Node*>(), root, *position, END, -1);
                 //check suffix Link
-                if(internalNode != NULL){
+                if(internalNode != nullptr){
                     internalNode->suffixLink = activeNode;
-                    internalNode == NULL;
+                    internalNode = nullptr;
                 }
             }
             // edge exists
@@ -91,10 +75,10 @@ public:
                 }
 
                 //extension rule 3 - current char already on the edge
-                if(text[next->first + activeLength - 1] == text[position - 1]){
-                    if(internalNode != NULL && activeNode != root) {
+                if(text[next->first + activeLength - 1] == text[*position - 1]){
+                    if(internalNode != nullptr && activeNode != root) {
                         internalNode->suffixLink = activeNode;
-                        internalNode = NULL;
+                        internalNode = nullptr;
                     }
 
                     //APCFER3
@@ -111,14 +95,12 @@ public:
                 activeNode->children[text[activeEdge - 1]] = split;
 
                 //adding leaf out from internal node
-                //split->children.emplace_back(Node(vector<Node>(), root, position, leafEnd, -1));
-                split->children[text[position - 1]] = new Node(map<char, Node*>(), root, position, END, -1);
+                split->children[text[*position - 1]] = new Node(map<char, Node*>(), root, *position, END, -1);
                 next->first += activeLength;
-                //need to update map char !!!
-                split->children[text[next->first]] = next;
+                split->children[text[*split->last]] = next;
 
                 //add suffix link
-                if(internalNode != NULL){
+                if(internalNode != nullptr){
                     internalNode->suffixLink = split;
                 }
 
@@ -129,7 +111,7 @@ public:
             remainingSuffixCount--;
             if (activeNode == root && activeLength > 0){ //APCFER2C1
                 activeLength--;
-                activeEdge = position - remainingSuffixCount + 1;
+                activeEdge = *position - remainingSuffixCount + 1;
             }
             else if (activeNode != root) { //APCFER2C2
                 activeNode = activeNode->suffixLink;
@@ -206,7 +188,8 @@ public:
         root->last = rootEnd;
 
         activeNode = root;
-        for (int i = 1; i <= text.size(); ++i) {
+        int *i = new int(1);
+        for (*i = 1; *i <= text.size(); ++*i) {
             extension(i, text);
         }
         int labelHeight = 0;
