@@ -40,7 +40,7 @@ class SuffixTree {
 
 public:
     SuffixTree() : internalNode(nullptr), activeNode(root), activeEdge(-1), activeLength(0), remainingSuffixCount(0), END(0) {}
-    void extension(int *position, string text) {
+    void extension(int *position, string text, int *suffixIndex) {
         //extension rule 1
         this->END = position;
         //increase remainingSuffixCount
@@ -59,7 +59,8 @@ public:
             if(activeNode->children.find(text[activeEdge - 1]) == activeNode->children.end()) {
                 //extension rule 2
                 //create new leaf edge
-                activeNode->children[text[activeEdge - 1]] = new Node(map<char, Node*>(), root, *position, END, -1);
+                activeNode->children[text[activeEdge - 1]] = new Node(map<char, Node*>(), root, *position, END, *suffixIndex);
+                (*suffixIndex)++;
                 //check suffix Link
                 if(internalNode != nullptr){
                     internalNode->suffixLink = activeNode;
@@ -95,7 +96,8 @@ public:
                 activeNode->children[text[activeEdge - 1]] = split;
 
                 //adding leaf out from internal node
-                split->children[text[*position - 1]] = new Node(map<char, Node*>(), root, *position, END, -1);
+                split->children[text[*position - 1]] = new Node(map<char, Node*>(), root, *position, END, *suffixIndex);
+                (*suffixIndex)++;
                 next->first += activeLength;
                 split->children[text[*split->last]] = next;
 
@@ -133,34 +135,24 @@ public:
     //Print the suffix tree as well along with setting suffix index
     //So tree will be printed in DFS manner
     //Each edge along with it's suffix index will be printed
-    void setSuffixIndexByDFS(Node *n, int labelHeight, string text)
+    void printTree(Node *n, string text, int counter)
     {
         if (n == NULL)  return;
 
-        if (n->first != -1) //A non-root node
+        if (n->first != 0) //A non-root node
         {
             //Print the label on edge from parent to current node
-            cout << (n->first, n->last);
+            cout << "first: " << n->first << ", last: " <<  *n->last << ", suffix index: " << n->suffixIndex << endl;
         }
-        int leaf = 1;
-        int i;
-        for (i = 0; i < text.size(); i++)
+        for (int i = 0; i < text.size(); i++)
         {
+            if(n->children[text[i]] == nullptr || i < counter) continue;
             if (i < n->children.size())
             {
-                if (leaf == 1 && n->first != -1)
-                    printf(" [%d]\n", n->suffixIndex);
-
                 //Current node is not a leaf as it has outgoing
                 //edges from it.
-                leaf = 0;
-                setSuffixIndexByDFS(n->children[i], labelHeight + edgeLength(n->children[i]), text);
+                setSuffixIndexByDFS(n->children[text[i]], text, i);
             }
-        }
-        if (leaf == 1)
-        {
-            n->suffixIndex = text.size() - labelHeight;
-            printf(" [%d]\n", n->suffixIndex);
         }
     }
 
@@ -171,16 +163,15 @@ public:
         int i;
         for (i = 0; i < text.size(); i++)
         {
-            if (&n->children[i] != NULL)
+            if (&n->children[text[i]] != NULL)
             {
-                freeSuffixTreeByPostOrder(n->children[i], text);
+                freeSuffixTreeByPostOrder(n->children[text[i]], text);
             }
         }
         if (n->suffixIndex == -1)
             delete(&n->last);
         delete(n);
     }
-
     void buildTree(string text) {
         rootEnd = new int(0);
         root = new Node();
@@ -188,14 +179,14 @@ public:
         root->last = rootEnd;
 
         activeNode = root;
+        int *suffixIndex = new int(1);
         int *i = new int(1);
         for (*i = 1; *i <= text.size(); ++*i) {
-            extension(i, text);
+            extension(i, text, suffixIndex);
         }
-        int labelHeight = 0;
-        setSuffixIndexByDFS(root, labelHeight, text);
+        *i = text.size();
+        printTree(root, text, 0);
 
-        freeSuffixTreeByPostOrder(root, text);
     }
 
 };
