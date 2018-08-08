@@ -132,27 +132,24 @@ public:
         return false;
     }
 
-    //Print the suffix tree as well along with setting suffix index
-    //So tree will be printed in DFS manner
-    //Each edge along with it's suffix index will be printed
-    void printTree(Node *n, string text, int counter)
+    void printTree(Node *n, string text)
     {
         if (n == NULL)  return;
-
-        if (n->first != 0) //A non-root node
-        {
-            //Print the label on edge from parent to current node
-            cout << "first: " << n->first << ", last: " <<  *n->last << ", suffix index: " << n->suffixIndex << endl;
-        }
-        for (int i = 0; i < text.size(); i++)
-        {
-            if(n->children[text[i]] == nullptr || i < counter) continue;
-            if (i < n->children.size())
-            {
-                //Current node is not a leaf as it has outgoing
-                //edges from it.
-                setSuffixIndexByDFS(n->children[text[i]], text, i);
+        cout << "first: " << n->first << ", last: " <<  *n->last << ", suffix index: " << n->suffixIndex << endl;
+        for (int i = 0; i < text.size(); i++){
+            if(n->children[text[i]] == nullptr) continue;
+            //if(!(text[i] > n->first) || n->first == 0)
+            bool char_repeated = false;
+            //check if node is already printed, char like this happened before! (repetitions)
+            for (int j = 0; j < i; j++) {
+                if(text[i] == text[j])
+                {
+                    char_repeated = true;
+                    break;
+                }
             }
+            if(!char_repeated)
+            printTree(n->children[text[i]], text);
         }
     }
 
@@ -185,13 +182,15 @@ public:
             extension(i, text, suffixIndex);
         }
         *i = text.size();
-        printTree(root, text, 0);
+        printTree(root, text);
 
     }
 
 };
 
 string notes = "abcabxabcd";
+
+string notes2 = "d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.e3.f3#e3.e3.f3#e3.d3.d3.e3.f3#e3.a3.a3.d3.b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.c3#c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.e3.d3.c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.c3#c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.e3.d3.c3#b2.f2#g2.f2#a2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.d2.f2#a2.d2.f2#g2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#e2.e2.d2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#g2.a2.d2.f2#a2.d2.f2#g2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#e2.d2.f2#g2.f2#e2.d2.f2#a2.d2.f2#a2.d2.f2#g2.f2#e2.e2.d2.f2#g2.f2#e2.a1.d2.a2.a1.d2.a2.a1.d2.g2.a1.d2.g2.a1.d2.f2#a1.d2.f2#a1.d2.g2.a1.d2.d3.d2.a2.d3.d2.a2.d3.d2.g2.d3.d2.g2.d3.d2.f2#d3.d2.f2#d3.d2.g2.d3.d2.g2.d3.f2#a2.d3.f2#a2.d3.e2.g2.d3.e2.g2.d3.d2.f2#d3.d2.f2#d3.d2.g2.d3.d2.g2.d3.f2#d3.f2#d3.f2#d3.e2.d3.e2.d3.e2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.f3#b2.g3.a3.c3#d3.b3.f3#e3.a3.c3#d3.b3.f3#e3.d3.c3#a2.f3#b2.g3.a3.c3#d3.b2.b2.d2.d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.e3.f3#e3.e3.f3#e3.d3.d3.e3.f3#e3.a3.a3.d3.b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.c3#d3.d3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.e3.d3.d3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.f3#a3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.d3.d3.f3#g3.f3#e3.d3.f3#a3.a3.f3#g3.f3#e3.d3.d3.f3#g3.f3#e3.a3.a2.d3.a3.a2.d3.a3.a2.d3.g3.a2.d3.g3.a2.d3.f3#a2.d3.f3#g2.a2.d3.g2.a2.a3.a2.d3.a3.a2.d3.a3.a2.d3.g3.a2.d3.g3.a2.d3.f3#a2.d3.f3#a2.d3.g3.a2.d3.d4.d3.a3.d4.d3.g3.d4.d3.g3.d4.d3.f3#d4.d3.f3#d4.d3.g3.d4.d3.g3.d4.d3.a3.d4.d3.a3.d4.d3.g3.d4.d3.g3.d4.d3.f3#d4.d3.f3#d4.d3.g3.d4.d3.g3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d3.";
 
 int main() {
     cout << "Hello, World!" << endl;
