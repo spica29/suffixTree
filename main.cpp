@@ -132,7 +132,34 @@ public:
         return false;
     }
 
-    void printTree(Node *n, string text)
+    void printGraphviz(Node *n, string text, char *letter_parent, char *letter_child, bool root_visited){
+        if(n == NULL) {
+            *letter_child = (char)(*letter_child + 1);
+            return;
+        }
+
+        for (auto const& node : n->children) {
+            if(n == root && root_visited){
+                *letter_parent = 'a';
+            }
+            //cout << "first: " << n->first << ", last: " <<  *n->last << ", suffix index: " << n->suffixIndex << endl;
+            cout << letter_parent << " -> " << letter_child << endl;
+            if(root_visited && *letter_parent == 'a'){
+                *letter_parent = *letter_child;
+            }
+            else {
+                (*letter_parent)++;
+            }
+            if(n == root){
+                root_visited = true;
+            }
+            (*letter_child)++;
+            printGraphviz(node.second, text, letter_parent, letter_child, root_visited);
+        }
+        (*letter_parent)--;
+    }
+
+    void printTreeDFS(Node *n, string text)
     {
         if (n == NULL)  return;
         cout << "first: " << n->first << ", last: " <<  *n->last << ", suffix index: " << n->suffixIndex << endl;
@@ -149,7 +176,7 @@ public:
                 }
             }
             if(!char_repeated)
-            printTree(n->children[text[i]], text);
+            printTreeDFS(n->children[text[i]], text);
         }
     }
 
@@ -182,8 +209,10 @@ public:
             extension(i, text, suffixIndex);
         }
         *i = text.size();
-        printTree(root, text);
-
+        //printTreeDFS(root, text);
+        char *first = new char('a');
+        char *child = new char('b');
+        printGraphviz(root, text, first, child, false);
     }
 
 };
