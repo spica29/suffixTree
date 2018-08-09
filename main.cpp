@@ -9,6 +9,7 @@ class SuffixTree {
     struct Node {
         //list of children
         map<char, Node*> children;
+        Node* parent;
 
         //pointer to other node via suffix link
         Node *suffixLink;
@@ -19,10 +20,12 @@ class SuffixTree {
         // This will be non-negative for leaves and will give index of suffix for the path from root to this leaf.
         // For non-leaf node, it will be -1.
         int suffixIndex;
+        //save list of suffixIndexes of node's subtree
+        vector<int> suffixIndices;
 
-        Node() : children(map<char, Node*>()), suffixLink(0), first(0), last(0), suffixIndex(-1) {};
+        Node() : children(map<char, Node*>()), suffixLink(0), first(0), last(0), parent(0), suffixIndex(-1), suffixIndices(vector<int>()) {};
         Node(map<char, Node*> _children, Node *_suffixLink, int _first, int *_last, int _suffixIndex)
-        : children(_children), suffixLink(_suffixLink), first(_first), last(_last), suffixIndex(_suffixIndex) {};
+        : children(_children), suffixLink(_suffixLink), first(_first), last(_last), parent(0), suffixIndex(_suffixIndex), suffixIndices(vector<int>()) {};
 
     };
 
@@ -61,6 +64,14 @@ public:
                 //extension rule 2
                 //create new leaf edge
                 activeNode->children[text[activeEdge - 1]] = new Node(map<char, Node*>(), root, *position, END, *suffixIndex);
+                activeNode->children[text[activeEdge - 1]]->parent = activeNode;
+                activeNode->children[text[activeEdge - 1]]->suffixIndices.emplace_back(*suffixIndex);
+                //update suffixIndices for parents of new node
+                Node *newLeaf = activeNode->children[text[activeEdge - 1]];
+                while(newLeaf->parent != NULL){
+                    newLeaf->parent->suffixIndices.emplace_back(*suffixIndex);
+                    newLeaf = newLeaf->parent;
+                }
                 (*suffixIndex)++;
                 //check suffix Link
                 if(internalNode != nullptr){
@@ -94,14 +105,24 @@ public:
 
                 //new internal node
                 Node *split = new Node(map<char, Node*>(), root, next->first, splitEnd, -1);
+                split->parent = next->parent;
+                split->suffixIndices.insert(split->suffixIndices.begin(), next->suffixIndices.begin(), next->suffixIndices.end());
                 activeNode->children[text[activeEdge - 1]] = split;
 
                 //adding leaf out from internal node
                 split->children[text[*position - 1]] = new Node(map<char, Node*>(), root, *position, END, *suffixIndex);
+                split->children[text[*position - 1]]->parent = split;
+                split->children[text[*position - 1]]->suffixIndices.emplace_back(*suffixIndex);
                 (*suffixIndex)++;
                 next->first += activeLength;
+                next->parent = split;
                 split->children[text[*split->last]] = next;
-
+                //update suffixIndices for parents of new node
+                Node *newLeaf = split->children[text[*position - 1]];
+                while(newLeaf->parent != NULL){
+                    newLeaf->parent->suffixIndices.emplace_back(*suffixIndex - 1);
+                    newLeaf = newLeaf->parent;
+                }
                 //add suffix link
                 if(internalNode != nullptr){
                     internalNode->suffixLink = split;
@@ -246,7 +267,7 @@ int main() {
         perror( "Error deleting file" );
     else
         puts( "File successfully deleted" );
-    sf.buildTree(notes2);
+    sf.buildTree(notes);
 
     return 0;
 }
