@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <fstream>
 
 using namespace std;
 
@@ -132,15 +133,16 @@ public:
         return false;
     }
 
-    void printGraphviz(Node *n, string text, char *letter_parent, char *letter_child, bool root_visited){
+    //void printGraphviz(Node *n, string text, char *letter_parent, char *letter_child, bool root_visited){
+    void printGraphviz(Node *n, string text, int *letter_parent, int *letter_child, bool root_visited){
         if(n == NULL) {
-            *letter_child = (char)(*letter_child + 1);
+            *letter_child = *letter_child + 1;
             return;
         }
 
         for (auto const& node : n->children) {
             if(n == root && root_visited){
-                *letter_parent = 'a';
+                *letter_parent = 0;
             }
             //cout << "first: " << n->first << ", last: " <<  *n->last << ", suffix index: " << n->suffixIndex << endl;
             //cout << letter_parent << " -> " << letter_child << endl;
@@ -150,8 +152,14 @@ public:
             }
             else cout << (string)"\"" + letter_parent + (string)" " + text.substr(n->first - 1, *n->last - n->first + 1) + (string)"\"" << " -> " << (string)"\"" + letter_child + (string)" " + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1) + (string)"\"" << endl;
              */
-            cout << (string)letter_parent + " -> " + letter_child + " [ label=\"" + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1) + "\" ];" << endl;
-            if(root_visited && *letter_parent == 'a'){
+            std::fstream file;
+            file.open (".././output.txt", std::fstream::in | std::fstream::out | std::fstream::app);
+
+            if (!file) { std::cerr<<"Error writing to ..."<<std::endl; }
+            else
+                file  << *letter_parent << " -> " << *letter_child << " [ label=\"" + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1) + "\" ];" << endl;
+            file.close();
+            if(root_visited && *letter_parent == 0){
                 *letter_parent = *letter_child;
             }
             else {
@@ -219,7 +227,10 @@ public:
         //printTreeDFS(root, text);
         char *first = new char('a');
         char *child = new char('b');
-        printGraphviz(root, text, first, child, false);
+        int *first_num = new int(0);
+        int *child_num = new int(1);
+        //printGraphviz(root, text, first, child, false);
+        printGraphviz(root, text, first_num, child_num, false);
     }
 
 };
@@ -231,7 +242,11 @@ string notes2 = "d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.
 int main() {
     cout << "Hello, World!" << endl;
     SuffixTree sf;
-    sf.buildTree(notes);
+    if( remove( ".././output.txt" ) != 0 )
+        perror( "Error deleting file" );
+    else
+        puts( "File successfully deleted" );
+    sf.buildTree(notes2);
 
     return 0;
 }
