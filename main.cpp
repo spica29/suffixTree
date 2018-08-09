@@ -143,7 +143,14 @@ public:
                 *letter_parent = 'a';
             }
             //cout << "first: " << n->first << ", last: " <<  *n->last << ", suffix index: " << n->suffixIndex << endl;
-            cout << letter_parent << " -> " << letter_child << endl;
+            //cout << letter_parent << " -> " << letter_child << endl;
+            /*
+            if(n->first == 0){
+                cout << (string)"\"" + letter_parent + (string)" root \"" << " -> " << (string)"\"" + letter_child + (string)" " + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1 ) + (string)"\"" << endl;
+            }
+            else cout << (string)"\"" + letter_parent + (string)" " + text.substr(n->first - 1, *n->last - n->first + 1) + (string)"\"" << " -> " << (string)"\"" + letter_child + (string)" " + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1) + (string)"\"" << endl;
+             */
+            cout << (string)letter_parent + " -> " + letter_child + " [ label=\"" + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1) + "\" ];" << endl;
             if(root_visited && *letter_parent == 'a'){
                 *letter_parent = *letter_child;
             }
