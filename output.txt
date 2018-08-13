@@ -1,0 +1,17 @@
+0 -> 8 [ label="a" ];
+8 -> 4 [ label="b" ];
+4 -> 5 [ label="axabcd" ];
+4 -> 11 [ label="c" ];
+11 -> 1 [ label="abaxabcd" ];
+11 -> 12 [ label="d" ];
+8 -> 9 [ label="xabcd" ];
+0 -> 6 [ label="b" ];
+6 -> 7 [ label="axabcd" ];
+6 -> 13 [ label="c" ];
+13 -> 2 [ label="abaxabcd" ];
+13 -> 14 [ label="d" ];
+0 -> 15 [ label="c" ];
+15 -> 3 [ label="abaxabcd" ];
+15 -> 16 [ label="d" ];
+0 -> 17 [ label="d" ];
+0 -> 10 [ label="xabcd" ];

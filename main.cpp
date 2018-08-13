@@ -10,6 +10,7 @@ class SuffixTree {
         //list of children
         map<char, Node*> children;
         Node* parent;
+        int number;
 
         //pointer to other node via suffix link
         Node *suffixLink;
@@ -44,7 +45,7 @@ class SuffixTree {
 
 public:
     SuffixTree() : internalNode(nullptr), activeNode(root), activeEdge(-1), activeLength(0), remainingSuffixCount(0), END(0) {}
-    void extension(int *position, string text, int *suffixIndex) {
+    void extension(int *position, string text, int *suffixIndex, int *counter) {
         //extension rule 1
         this->END = position;
         //increase remainingSuffixCount
@@ -65,6 +66,7 @@ public:
                 //create new leaf edge
                 activeNode->children[text[activeEdge - 1]] = new Node(map<char, Node*>(), root, *position, END, *suffixIndex);
                 activeNode->children[text[activeEdge - 1]]->parent = activeNode;
+                activeNode->children[text[activeEdge - 1]]->number = *counter;
                 activeNode->children[text[activeEdge - 1]]->suffixIndices.emplace_back(*suffixIndex);
                 //update suffixIndices for parents of new node
                 Node *newLeaf = activeNode->children[text[activeEdge - 1]];
@@ -73,6 +75,7 @@ public:
                     newLeaf = newLeaf->parent;
                 }
                 (*suffixIndex)++;
+                (*counter)++;
                 //check suffix Link
                 if(internalNode != nullptr){
                     internalNode->suffixLink = activeNode;
@@ -106,19 +109,25 @@ public:
                 //new internal node
                 Node *split = new Node(map<char, Node*>(), root, next->first, splitEnd, -1);
                 split->parent = next->parent;
+                split->number = *counter;
+                (*counter)++;
                 split->suffixIndices.insert(split->suffixIndices.begin(), next->suffixIndices.begin(), next->suffixIndices.end());
                 activeNode->children[text[activeEdge - 1]] = split;
 
                 //adding leaf out from internal node
                 split->children[text[*position - 1]] = new Node(map<char, Node*>(), root, *position, END, *suffixIndex);
-                split->children[text[*position - 1]]->parent = split;
-                split->children[text[*position - 1]]->suffixIndices.emplace_back(*suffixIndex);
+                Node *newLeaf = split->children[text[*position - 1]];
+                newLeaf->number = *END;
+                newLeaf->parent = split;
+                newLeaf->number = *counter;
+                (*counter)++;
+                newLeaf->suffixIndices.emplace_back(*suffixIndex);
                 (*suffixIndex)++;
                 next->first += activeLength;
                 next->parent = split;
                 split->children[text[*split->last]] = next;
                 //update suffixIndices for parents of new node
-                Node *newLeaf = split->children[text[*position - 1]];
+
                 while(newLeaf->parent != NULL){
                     newLeaf->parent->suffixIndices.emplace_back(*suffixIndex - 1);
                     newLeaf = newLeaf->parent;
@@ -154,45 +163,19 @@ public:
         return false;
     }
 
-    //void printGraphviz(Node *n, string text, char *letter_parent, char *letter_child, bool root_visited){
-    void printGraphviz(Node *n, string text, int *letter_parent, int *letter_child, bool root_visited){
-        if(n == NULL) {
-            *letter_child = *letter_child + 1;
-            return;
-        }
-
-        for (auto const& node : n->children) {
-            if(n == root && root_visited){
-                *letter_parent = 0;
-            }
-            //cout << "first: " << n->first << ", last: " <<  *n->last << ", suffix index: " << n->suffixIndex << endl;
-            //cout << letter_parent << " -> " << letter_child << endl;
-            /*
-            if(n->first == 0){
-                cout << (string)"\"" + letter_parent + (string)" root \"" << " -> " << (string)"\"" + letter_child + (string)" " + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1 ) + (string)"\"" << endl;
-            }
-            else cout << (string)"\"" + letter_parent + (string)" " + text.substr(n->first - 1, *n->last - n->first + 1) + (string)"\"" << " -> " << (string)"\"" + letter_child + (string)" " + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1) + (string)"\"" << endl;
-             */
+    void printGraphvizDFS(Node *n, string text){
+        if(n == NULL) return;
+        for (auto const &node: n->children){
             std::fstream file;
             file.open (".././output.txt", std::fstream::in | std::fstream::out | std::fstream::app);
 
             if (!file) { std::cerr<<"Error writing to ..."<<std::endl; }
             else
-                file  << *letter_parent << " -> " << *letter_child << " [ label=\"" + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1) + "\" ];" << endl;
+                file  << n->number << " -> " << node.second->number << " [ label=\"" + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1) + "\" ];" << endl;
             file.close();
-            if(root_visited && *letter_parent == 0){
-                *letter_parent = *letter_child;
-            }
-            else {
-                (*letter_parent)++;
-            }
-            if(n == root){
-                root_visited = true;
-            }
-            (*letter_child)++;
-            printGraphviz(node.second, text, letter_parent, letter_child, root_visited);
+
+            printGraphvizDFS(node.second, text);
         }
-        (*letter_parent)--;
     }
 
     void printTreeDFS(Node *n, string text)
@@ -236,13 +219,15 @@ public:
         rootEnd = new int(0);
         root = new Node();
         root->first = 0;
+        root->number = 0;
         root->last = rootEnd;
 
         activeNode = root;
         int *suffixIndex = new int(1);
+        int *counter = new int(1);
         int *i = new int(1);
         for (*i = 1; *i <= text.size(); ++*i) {
-            extension(i, text, suffixIndex);
+            extension(i, text, suffixIndex, counter);
         }
         *i = text.size();
         //printTreeDFS(root, text);
@@ -250,13 +235,12 @@ public:
         char *child = new char('b');
         int *first_num = new int(0);
         int *child_num = new int(1);
-        //printGraphviz(root, text, first, child, false);
-        printGraphviz(root, text, first_num, child_num, false);
+        printGraphvizDFS(root, text);
     }
 
 };
 
-string notes = "abcabxabcd";
+string notes = "abcabaxabcd";
 
 string notes2 = "d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.e3.f3#e3.e3.f3#e3.d3.d3.e3.f3#e3.a3.a3.d3.b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.c3#c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.e3.d3.c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.c3#c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.e3.d3.c3#b2.f2#g2.f2#a2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.d2.f2#a2.d2.f2#g2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#e2.e2.d2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#g2.a2.d2.f2#a2.d2.f2#g2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#e2.d2.f2#g2.f2#e2.d2.f2#a2.d2.f2#a2.d2.f2#g2.f2#e2.e2.d2.f2#g2.f2#e2.a1.d2.a2.a1.d2.a2.a1.d2.g2.a1.d2.g2.a1.d2.f2#a1.d2.f2#a1.d2.g2.a1.d2.d3.d2.a2.d3.d2.a2.d3.d2.g2.d3.d2.g2.d3.d2.f2#d3.d2.f2#d3.d2.g2.d3.d2.g2.d3.f2#a2.d3.f2#a2.d3.e2.g2.d3.e2.g2.d3.d2.f2#d3.d2.f2#d3.d2.g2.d3.d2.g2.d3.f2#d3.f2#d3.f2#d3.e2.d3.e2.d3.e2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.f3#b2.g3.a3.c3#d3.b3.f3#e3.a3.c3#d3.b3.f3#e3.d3.c3#a2.f3#b2.g3.a3.c3#d3.b2.b2.d2.d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.e3.f3#e3.e3.f3#e3.d3.d3.e3.f3#e3.a3.a3.d3.b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.c3#d3.d3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.e3.d3.d3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.f3#a3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.d3.d3.f3#g3.f3#e3.d3.f3#a3.a3.f3#g3.f3#e3.d3.d3.f3#g3.f3#e3.a3.a2.d3.a3.a2.d3.a3.a2.d3.g3.a2.d3.g3.a2.d3.f3#a2.d3.f3#g2.a2.d3.g2.a2.a3.a2.d3.a3.a2.d3.a3.a2.d3.g3.a2.d3.g3.a2.d3.f3#a2.d3.f3#a2.d3.g3.a2.d3.d4.d3.a3.d4.d3.g3.d4.d3.g3.d4.d3.f3#d4.d3.f3#d4.d3.g3.d4.d3.g3.d4.d3.a3.d4.d3.a3.d4.d3.g3.d4.d3.g3.d4.d3.f3#d4.d3.f3#d4.d3.g3.d4.d3.g3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d3.";
 
