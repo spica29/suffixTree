@@ -302,16 +302,22 @@ public:
         int length = 0;
         while(length <= text.length()){
             for(int i = 0; i < listOfPointers.size(); i++) {
-                char *charInStringForPointer = currentCharInString;
+                //char *charInStringForPointer = currentCharInString
+                bool found = false;
                 for (auto const &node: listOfPointers[i].node->children){
+                    if(!(*currentCharInString == node.first)) {
+                        continue;
+                    }
                     listOfPointers[i].charOnEdge = text.at(node.second->first - 1 + listOfPointers[i].edgeOffset);
 
-                    if(*charInStringForPointer == listOfPointers[i].charOnEdge){
-                        charInStringForPointer++;
+                    if(*currentCharInString == listOfPointers[i].charOnEdge){
+                        found = true;
+                        //charInStringForPointer++;
                         //needs to go to child of the node, examined all chars on the edge
                         if(node.second->first - 1 + listOfPointers[i].edgeOffset == *node.second->last - 1){
                             listOfPointers[i].node = node.second;
                             listOfPointers[i].edgeOffset = 0;
+                            break;
                         }
                         //not all chars from the edge examined
                         else {
@@ -319,11 +325,13 @@ public:
                             break;
                         }
                     } else {
-                        if(currentCharInString == charInStringForPointer)
-                            listOfPointers.emplace_back(NodePointer(listOfPointers[i].charOnEdge, root));
+                        //if(currentCharInString == charInStringForPointer)
+                            //listOfPointers.emplace_back(NodePointer(listOfPointers[i].charOnEdge, root));
                         break;
                     }
                 }
+                if(!found)
+                    listOfPointers.emplace_back(NodePointer(listOfPointers[i].charOnEdge, root));
             }
 
             length++;
