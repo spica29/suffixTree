@@ -27,7 +27,18 @@ class SuffixTree {
         Node() : children(map<char, Node*>()), suffixLink(0), first(0), last(0), parent(0), suffixIndex(-1), suffixIndices(vector<int>()) {};
         Node(map<char, Node*> _children, Node *_suffixLink, int _first, int *_last, int _suffixIndex)
         : children(_children), suffixLink(_suffixLink), first(_first), last(_last), parent(0), suffixIndex(_suffixIndex), suffixIndices(vector<int>()) {};
+        Node(map<char, Node*> _children, Node *_suffixLink, Node* _parent, int _number, int _first, int *_last, int _suffixIndex)
+        : children(_children), suffixLink(_suffixLink), parent(_parent), number(_number), first(_first), last(_last), suffixIndex(_suffixIndex), suffixIndices(vector<int>()) {};
+    };
 
+    //structure for string search which will have information about until which char on the edge algorithm came,
+    // which node and which is the next char that should come for the algorithm to continue walk on this edge
+    struct NodePointer {
+        char charOnEdge;
+        Node *node;
+        int edgeOffset;
+
+        NodePointer(char _charOnEdge, Node *_node) : charOnEdge(_charOnEdge), node(_node), edgeOffset(0) {};
     };
 
     Node *root; //pointer to root node
@@ -59,17 +70,14 @@ public:
                 activeEdge = *position; //position of character in string
             }
 
-
             //there does not exist edge going out from activeNode starting with activeEdge
             if(activeNode->children.find(text[activeEdge - 1]) == activeNode->children.end()) {
                 //extension rule 2
                 //create new leaf edge
-                activeNode->children[text[activeEdge - 1]] = new Node(map<char, Node*>(), root, *position, END, *suffixIndex);
-                activeNode->children[text[activeEdge - 1]]->parent = activeNode;
-                activeNode->children[text[activeEdge - 1]]->number = *counter;
-                activeNode->children[text[activeEdge - 1]]->suffixIndices.emplace_back(*suffixIndex);
-                //update suffixIndices for parents of new node
+                activeNode->children[text[activeEdge - 1]] = new Node(map<char, Node*>(), root, activeNode, *counter, *position, END, *suffixIndex);
                 Node *newLeaf = activeNode->children[text[activeEdge - 1]];
+                //update suffixIndices for parents of new node
+                newLeaf->suffixIndices.emplace_back(*suffixIndex);
                 while(newLeaf->parent != NULL){
                     newLeaf->parent->suffixIndices.emplace_back(*suffixIndex);
                     newLeaf = newLeaf->parent;
@@ -107,24 +115,19 @@ public:
                 splitEnd = new int(next->first + activeLength - 1);
 
                 //new internal node
-                Node *split = new Node(map<char, Node*>(), root, next->first, splitEnd, -1);
-                split->parent = next->parent;
-                split->number = *counter;
+                Node *split = new Node(map<char, Node*>(), root, next->parent, *counter, next->first, splitEnd, -1);
                 (*counter)++;
                 split->suffixIndices.insert(split->suffixIndices.begin(), next->suffixIndices.begin(), next->suffixIndices.end());
                 activeNode->children[text[activeEdge - 1]] = split;
 
                 //adding leaf out from internal node
-                split->children[text[*position - 1]] = new Node(map<char, Node*>(), root, *position, END, *suffixIndex);
+                split->children[text[*position - 1]] = new Node(map<char, Node*>(), root, split, *counter, *position, END, *suffixIndex);
                 Node *newLeaf = split->children[text[*position - 1]];
-                newLeaf->number = *END;
-                newLeaf->parent = split;
-                newLeaf->number = *counter;
-                (*counter)++;
                 newLeaf->suffixIndices.emplace_back(*suffixIndex);
-                (*suffixIndex)++;
                 next->first += activeLength;
                 next->parent = split;
+                (*counter)++;
+                (*suffixIndex)++;
                 split->children[text[*split->last]] = next;
                 //update suffixIndices for parents of new node
 
@@ -165,13 +168,32 @@ public:
 
     void printGraphvizDFS(Node *n, string text){
         if(n == NULL) return;
-        for (auto const &node: n->children){
+        //check suffix link
+        /*
+        if(n->suffixLink != NULL && n->suffixLink != root) {
             std::fstream file;
             file.open (".././output.txt", std::fstream::in | std::fstream::out | std::fstream::app);
 
             if (!file) { std::cerr<<"Error writing to ..."<<std::endl; }
             else
-                file  << n->number << " -> " << node.second->number << " [ label=\"" + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1) + "\" ];" << endl;
+                file  << n->number << " -- " << n->suffixLink->number << " [ color = \"blue\" ];" << endl;
+            file.close();
+        }
+         */
+
+        for (auto const &node: n->children){
+            std::fstream file;
+            file.open (".././output.txt", std::fstream::in | std::fstream::out | std::fstream::app);
+
+            if (!file) { std::cerr<<"Error writing to ..."<<std::endl; }
+            else{
+                file  << n->number << " -- " << node.second->number << " [ label=\"" + text.substr(node.second->first - 1, *node.second->last - node.second->first + 1) + "\", xlabel=\"";
+                for (int i = 0; i < node.second->suffixIndices.size(); i++) {
+                    file << node.second->suffixIndices[i] << " ";
+                }
+
+                file << "\" ];" << endl;
+            }
             file.close();
 
             printGraphvizDFS(node.second, text);
@@ -215,6 +237,7 @@ public:
             delete(&n->last);
         delete(n);
     }
+
     void buildTree(string text) {
         rootEnd = new int(0);
         root = new Node();
@@ -236,6 +259,117 @@ public:
         int *first_num = new int(0);
         int *child_num = new int(1);
         printGraphvizDFS(root, text);
+
+        string matchSubstitution = "abbabaxabcd";
+        cout << "size " << matchSubstitution.length();
+        char *c = &matchSubstitution.at(0);
+        //first function
+        //findString(c, root, matchSubstitution);
+
+        //second function
+        vector<NodePointer> listOfCandidates;
+        listOfCandidates.emplace_back(NodePointer('a', root));
+        findStringWithPointers2(c, listOfCandidates, text);
+    }
+
+    void findString(char *currentCharInString, Node *n, string text) {
+        int edgeOffset = 0;
+        for (auto const &node: n->children){
+            //offset is for edge
+            char currentCharOnEdge = text.at(node.second->first - 1 + edgeOffset);
+            if(*currentCharInString == currentCharOnEdge){
+                cout << "same";
+                currentCharInString++;
+                //if all chars on the edge are examined go to the child node
+                if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
+                    findString(currentCharInString, node.second, text);
+                }
+                //if not, continue examining char on the edge
+                else {
+                    edgeOffset++;
+                    continue;
+                }
+            }
+            else {
+                cout << "dif";
+                currentCharInString++;
+                findString(currentCharInString, root, text);
+            }
+        }
+    }
+
+    void findStringWithPointers2(char *currentCharInString, vector<NodePointer> listOfPointers, string text){
+        int length = 0;
+        while(length <= text.length()){
+            for(int i = 0; i < listOfPointers.size(); i++) {
+                char *charInStringForPointer = currentCharInString;
+                for (auto const &node: listOfPointers[i].node->children){
+                    listOfPointers[i].charOnEdge = text.at(node.second->first - 1 + listOfPointers[i].edgeOffset);
+
+                    if(*charInStringForPointer == listOfPointers[i].charOnEdge){
+                        charInStringForPointer++;
+                        //needs to go to child of the node, examined all chars on the edge
+                        if(node.second->first - 1 + listOfPointers[i].edgeOffset == *node.second->last - 1){
+                            listOfPointers[i].node = node.second;
+                            listOfPointers[i].edgeOffset = 0;
+                        }
+                        //not all chars from the edge examined
+                        else {
+                            listOfPointers[i].edgeOffset++;
+                            break;
+                        }
+                    } else {
+                        if(currentCharInString == charInStringForPointer)
+                            listOfPointers.emplace_back(NodePointer(listOfPointers[i].charOnEdge, root));
+                        break;
+                    }
+                }
+            }
+
+            length++;
+            if(length <= text.size()){
+                currentCharInString++;
+            }
+        }
+    }
+
+    void findStringWithPointers(char *currentCharInString, string text, vector<NodePointer> listOfCandidates) {
+        for(int i = 0; i < listOfCandidates.size(); i++){
+            listOfCandidates[i].edgeOffset = 0;
+            for (auto const &node: listOfCandidates[i].node->children){
+                //offset is for edge
+                listOfCandidates[i].charOnEdge = text.at(node.second->first - 1 + listOfCandidates[i].edgeOffset);
+                //listOfCandidates[i].waitingForChar = text.at(node.second->first + edgeOffset);
+                //found char on the edge
+                if(*currentCharInString == listOfCandidates[i].charOnEdge){
+                    cout << "same";
+                    //if all chars on the edge are examined go to the child node
+                    if(node.second->first - 1 + listOfCandidates[i].edgeOffset == *node.second->last - 1){
+                        listOfCandidates[i].node = node.second;
+                        i = -1;
+                        break;
+                        //currentCharInString++;
+                        //findStringWithPointers(currentCharInString, text, listOfCandidates);
+                    }
+                    //if not, continue examining char on the edge
+                    else {
+                        listOfCandidates[i].edgeOffset = listOfCandidates[i].edgeOffset + 1;
+                        continue;
+                    }
+                }
+                else {
+                    cout << "dif";
+                    //listOfCandidates.emplace_back(NodePointer(listOfCandidates[i].charOnEdge, root, listOfCandidates[i].waitingForChar));
+                    //currentCharInString++;
+                    i = -1;
+                    break;
+                    //findStringWithPointers(currentCharInString, text, listOfCandidates);
+                }
+            }
+            currentCharInString++;
+        }
+        findStringWithPointers(currentCharInString, text, listOfCandidates);
+
     }
 
 };
@@ -252,6 +386,7 @@ int main() {
     else
         puts( "File successfully deleted" );
     sf.buildTree(notes);
+
 
     return 0;
 }
