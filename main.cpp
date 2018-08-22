@@ -39,6 +39,13 @@ class SuffixTree {
         int edgeOffset;
 
         NodePointer(char _charOnEdge, Node *_node) : charOnEdge(_charOnEdge), node(_node), edgeOffset(0) {};
+
+        bool operator==(const NodePointer& np1){
+            return (np1.node == node && np1.edgeOffset == edgeOffset);
+        }
+        bool operator!=(const NodePointer& np1){
+            return !(np1.node == node && np1.edgeOffset == edgeOffset);
+        }
     };
 
     Node *root; //pointer to root node
@@ -301,37 +308,42 @@ public:
     void findStringWithPointers2(char *currentCharInString, vector<NodePointer> listOfPointers, string text){
         int length = 0;
         while(length <= text.length()){
+            bool found = false;
             for(int i = 0; i < listOfPointers.size(); i++) {
-                //char *charInStringForPointer = currentCharInString
-                bool found = false;
                 for (auto const &node: listOfPointers[i].node->children){
-                    if(!(*currentCharInString == node.first)) {
+                    char charOnTheEdge = text.at(node.second->first - 1 + listOfPointers[i].edgeOffset);
+                    if(!(*currentCharInString == charOnTheEdge)) {
+                        //pointer already showing on the char on the edge, don't check neighbours
+                        if(listOfPointers[i].edgeOffset != 0){
+                            break;
+                        }
                         continue;
                     }
-                    listOfPointers[i].charOnEdge = text.at(node.second->first - 1 + listOfPointers[i].edgeOffset);
+                    listOfPointers[i].charOnEdge = charOnTheEdge;
+                    found = true;
 
-                    if(*currentCharInString == listOfPointers[i].charOnEdge){
-                        found = true;
-                        //charInStringForPointer++;
-                        //needs to go to child of the node, examined all chars on the edge
-                        if(node.second->first - 1 + listOfPointers[i].edgeOffset == *node.second->last - 1){
-                            listOfPointers[i].node = node.second;
-                            listOfPointers[i].edgeOffset = 0;
-                            break;
+                    //needs to go to child of the node, examined all chars on the edge
+                    if(node.second->first - 1 + listOfPointers[i].edgeOffset == *node.second->last - 1){
+                        listOfPointers[i].node = node.second;
+                        listOfPointers[i].edgeOffset = 0;
+                        //check if same NodePointer already exists erase it, no need to duplicate
+                        for (int j = 0; j < listOfPointers.size(); j++) {
+                            if(listOfPointers[j] == listOfPointers[i] && i != j){
+                                listOfPointers.erase(listOfPointers.begin() + j);
+                            }
                         }
-                        //not all chars from the edge examined
-                        else {
-                            listOfPointers[i].edgeOffset++;
-                            break;
-                        }
-                    } else {
-                        //if(currentCharInString == charInStringForPointer)
-                            //listOfPointers.emplace_back(NodePointer(listOfPointers[i].charOnEdge, root));
+                        break;
+                    }
+                    //not all chars from the edge examined
+                    else {
+                        listOfPointers[i].edgeOffset++;
                         break;
                     }
                 }
-                if(!found)
-                    listOfPointers.emplace_back(NodePointer(listOfPointers[i].charOnEdge, root));
+                //if no children have given char, a mistake happened, start from the root with a new pointer
+                //check this only when every NodePointer is searched and char was not found
+                if(!found && i == listOfPointers.size() - 1)
+                    listOfPointers.emplace_back(NodePointer('a', root));
             }
 
             length++;
