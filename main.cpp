@@ -2,6 +2,9 @@
 #include <vector>
 #include <map>
 #include <fstream>
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
 
 using namespace std;
 
@@ -32,7 +35,7 @@ class SuffixTree {
     };
 
     //structure for string search which will have information about until which char on the edge algorithm came,
-    // which node and which is the next char that should come for the algorithm to continue walk on this edge
+    // which node and the offset of the character at the edge
     struct NodePointer {
         char charOnEdge;
         Node *node;
@@ -46,6 +49,15 @@ class SuffixTree {
         bool operator!=(const NodePointer& np1){
             return !(np1.node == node && np1.edgeOffset == edgeOffset);
         }
+    };
+
+    struct NodeTable {
+        int position;
+        float frequency;
+        map<int, float> frequencyMap;
+
+        NodeTable(int _position, int _frequency) : position(_position), frequency(_frequency) {};
+        NodeTable() : position(0), frequency(0) {};
     };
 
     Node *root; //pointer to root node
@@ -270,26 +282,40 @@ public:
         string matchSubstitution = "abbabaxabcd";
         cout << "size " << matchSubstitution.length();
         char *c = &matchSubstitution.at(0);
+        //vector<NodeTable> nodeTable;
+        map<int, float> frequencyMap;
         //first function
-        //findString(c, root, matchSubstitution);
+        //findString(c, root, matchSubstitution, frequencyMap, 1);
 
         //second function
         vector<NodePointer> listOfCandidates;
         listOfCandidates.emplace_back(NodePointer('a', root));
-        findStringWithPointers2(c, listOfCandidates, text);
+        findStringWithPointers(c, listOfCandidates, text);
     }
 
-    void findString(char *currentCharInString, Node *n, string text) {
+    void findString(char *currentCharInString, Node *n, string text, vector<pair<int, float> > &frequencyPairs, int position, int offsetFromRoot) {
         int edgeOffset = 0;
         for (auto const &node: n->children){
             //offset is for edge
             char currentCharOnEdge = text.at(node.second->first - 1 + edgeOffset);
             if(*currentCharInString == currentCharOnEdge){
+                //increase values of pair's position (first) by 1
+                int i = 0;
+                for(auto &frequencyPair: frequencyPairs){
+                    frequencyPair.first = frequencyPair.first + 1;
+                    if(frequencyPair.first == n->suffixIndices[i] + offsetFromRoot){
+                        //frequencyPair.first = n->suffixIndices[i] ;
+                        frequencyPair.second++;
+                    }
+                    i++;
+                }
+
+
                 cout << "same";
                 currentCharInString++;
                 //if all chars on the edge are examined go to the child node
                 if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
-                    findString(currentCharInString, node.second, text);
+                    findString(currentCharInString, node.second, text, frequencyPairs, position + 1, offsetFromRoot + 1);
                 }
                 //if not, continue examining char on the edge
                 else {
@@ -300,12 +326,12 @@ public:
             else {
                 cout << "dif";
                 currentCharInString++;
-                findString(currentCharInString, root, text);
+                findString(currentCharInString, root, text, frequencyPairs, position + 1, offsetFromRoot + 1);
             }
         }
     }
 
-    void findStringWithPointers2(char *currentCharInString, vector<NodePointer> listOfPointers, string text){
+    void findStringWithPointers(char *currentCharInString, vector<NodePointer> listOfPointers, string text){
         int length = 0;
         while(length <= text.length()){
             bool found = false;
@@ -342,7 +368,7 @@ public:
                 }
                 //if no children have given char, a mistake happened, start from the root with a new pointer
                 //check this only when every NodePointer is searched and char was not found
-                if(!found && i == listOfPointers.size() - 1)
+                if(!found && i == listOfPointers.size() - 1 && listOfPointers[listOfPointers.size()-1].node != root)
                     listOfPointers.emplace_back(NodePointer('a', root));
             }
 
@@ -353,46 +379,64 @@ public:
         }
     }
 
-    void findStringWithPointers(char *currentCharInString, string text, vector<NodePointer> listOfCandidates) {
-        for(int i = 0; i < listOfCandidates.size(); i++){
-            listOfCandidates[i].edgeOffset = 0;
-            for (auto const &node: listOfCandidates[i].node->children){
-                //offset is for edge
-                listOfCandidates[i].charOnEdge = text.at(node.second->first - 1 + listOfCandidates[i].edgeOffset);
-                //listOfCandidates[i].waitingForChar = text.at(node.second->first + edgeOffset);
-                //found char on the edge
-                if(*currentCharInString == listOfCandidates[i].charOnEdge){
-                    cout << "same";
-                    //if all chars on the edge are examined go to the child node
-                    if(node.second->first - 1 + listOfCandidates[i].edgeOffset == *node.second->last - 1){
-                        listOfCandidates[i].node = node.second;
-                        i = -1;
-                        break;
-                        //currentCharInString++;
-                        //findStringWithPointers(currentCharInString, text, listOfCandidates);
-                    }
-                    //if not, continue examining char on the edge
-                    else {
-                        listOfCandidates[i].edgeOffset = listOfCandidates[i].edgeOffset + 1;
-                        continue;
-                    }
-                }
-                else {
-                    cout << "dif";
-                    //listOfCandidates.emplace_back(NodePointer(listOfCandidates[i].charOnEdge, root, listOfCandidates[i].waitingForChar));
-                    //currentCharInString++;
-                    i = -1;
-                    break;
-                    //findStringWithPointers(currentCharInString, text, listOfCandidates);
-                }
-            }
-            currentCharInString++;
-        }
-        findStringWithPointers(currentCharInString, text, listOfCandidates);
+};
 
+//insert k chars at random positions
+string changeStringAddition(string pattern, int k){
+    srand((int)time(0));
+    for (int i = 0; i < k; i++) {
+        int randNum = rand() % pattern.size();
+        pattern.insert(randNum, 1, 'k');
     }
 
-};
+    cout << pattern;
+    return pattern;
+}
+
+string changeStringSubstitution(string pattern, int k){
+    srand((int)time(0));
+    for (int i = 0; i < k; i++) {
+        int randNum = rand() % pattern.size();
+        pattern.replace(randNum, 1, "k");
+    }
+
+    cout << pattern;
+    return pattern;
+}
+
+string changeStringDeletion(string pattern, int k){
+    srand((int)time(0));
+    for (int i = 0; i < k; i++) {
+        int randNum = rand() % pattern.size();
+        pattern.erase(randNum, 1);
+    }
+
+    cout << pattern;
+    return pattern;
+}
+
+void mapScoreToString(string score){
+    map<string, char> mapScore;
+    char letter = 'a';
+    for (int i = 0; i < score.size(); i = i + 3) {
+        string note = score.substr(i, 3);
+        //map string of size 3 to one letter
+        if(mapScore.find(note) == mapScore.end()){
+            mapScore[note] = letter;
+            letter++;
+        }
+    }
+
+    string scoreShorten;
+    //use map to make string of scores
+    for(int i = 0; i < score.size(); i = i + 3){
+        string note = score.substr(i, 3);
+        char letter = mapScore.at(note);
+        scoreShorten.insert(scoreShorten.size(), 1, letter);
+    }
+
+    cout << scoreShorten;
+}
 
 string notes = "abcabaxabcd";
 
@@ -400,13 +444,17 @@ string notes2 = "d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.
 
 int main() {
     cout << "Hello, World!" << endl;
-    SuffixTree sf;
+    /*
+     * SuffixTree sf;
     if( remove( ".././output.txt" ) != 0 )
         perror( "Error deleting file" );
     else
         puts( "File successfully deleted" );
-    sf.buildTree(notes);
+    sf.buildTree(notes);*/
 
+    //changeStringDeletion(notes, 3);
+
+    mapScoreToString(notes2);
 
     return 0;
 }
