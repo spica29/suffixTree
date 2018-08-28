@@ -279,8 +279,8 @@ public:
         int *child_num = new int(1);
         printGraphvizDFS(root, text);
 
-        string matchSubstitution = "abbabaxabcd";
-        cout << "size " << matchSubstitution.length();
+        string matchSubstitution = "ababaxabcd";
+        cout << "pattern:" << matchSubstitution << ", size of pattern: " << matchSubstitution.length() << endl;
         char *c = &matchSubstitution.at(0);
         //vector<NodeTable> nodeTable;
         vector<pair <int, int> >frequencyPair;
@@ -290,7 +290,7 @@ public:
         }
         */
         //first function
-        findString(c, root, matchSubstitution, frequencyPair, 1, 0, text);
+        findString(c, root, matchSubstitution, frequencyPair, 1, 0, text, 0);
 
         //second function
         //vector<NodePointer> listOfCandidates;
@@ -339,38 +339,41 @@ public:
         }
     }
 
-    void findString(char *currentCharInString, Node *n, string pattern, vector<pair<int, int> > &frequencyPairs, int position, int offsetFromRoot, string text) {
-        int edgeOffset = 0;
+    void findString(char *currentCharInPattern, Node *n, string pattern, vector<pair<int, int> > &frequencyPairs, int position, int offsetFromRoot, string text, int edgeOffset) {
         bool found = false;
         for (auto &node: n->children){
             //offset is for edge
             char currentCharOnEdge = text.at(node.second->first - 1 + edgeOffset);
+            if(!(*currentCharInPattern == currentCharOnEdge)) {
+                //pointer already showing on the char on the edge, don't check neighbours
+                if(edgeOffset != 0){
+                    break;
+                }
+                continue;
+            }
 
-            if(*currentCharInString == currentCharOnEdge){
+            if(*currentCharInPattern == currentCharOnEdge){
                 found = true;
                 addToTheTable(node.second, frequencyPairs, offsetFromRoot, text);
-                cout << "same";
-                currentCharInString++;
+                cout << " char in pattern: " << *currentCharInPattern << " max position: " << frequencyPairs[0].first << endl;
+                currentCharInPattern++;
                 //if all chars on the edge are examined go to the child node
                 if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
-                    findString(currentCharInString, node.second, pattern, frequencyPairs, position + 1, offsetFromRoot + 1, text);
+                    findString(currentCharInPattern, node.second, pattern, frequencyPairs, position + 1, offsetFromRoot + 1, text, 0);
                 }
                 //if not, continue examining char on the edge
                 else {
                     edgeOffset++;
-                    continue;
+                    findString(currentCharInPattern, n, pattern, frequencyPairs, position + 1, offsetFromRoot + 1, text, edgeOffset);
                 }
             }
+
             else if (edgeOffset != 0){
-                cout << "dif";
-                //currentCharInString++;
-                findString(currentCharInString, root, pattern, frequencyPairs, position + 1, 0, text);
+                findString(currentCharInPattern, root, pattern, frequencyPairs, position + 1, 0, text, 0);
             }
         }
         if(!found){
-            cout << "dif";
-            //currentCharInString++;
-            findString(currentCharInString, root, pattern, frequencyPairs, position + 1, 0, text);
+            findString(currentCharInPattern, root, pattern, frequencyPairs, position + 1, 0, text, 0);
         }
     }
 
