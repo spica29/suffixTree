@@ -283,39 +283,77 @@ public:
         cout << "size " << matchSubstitution.length();
         char *c = &matchSubstitution.at(0);
         //vector<NodeTable> nodeTable;
-        map<int, float> frequencyMap;
+        vector<pair <int, int> >frequencyPair;
+        /*
+        for(int i = 0; i < text.size(); i++){
+            frequencyPair.emplace_back(make_pair(i + 1, 0));
+        }
+        */
         //first function
-        //findString(c, root, matchSubstitution, frequencyMap, 1);
+        findString(c, root, matchSubstitution, frequencyPair, 1, 0, text);
 
         //second function
-        vector<NodePointer> listOfCandidates;
-        listOfCandidates.emplace_back(NodePointer('a', root));
-        findStringWithPointers(c, listOfCandidates, text);
+        //vector<NodePointer> listOfCandidates;
+        //listOfCandidates.emplace_back(NodePointer('a', root));
+        //findStringWithPointers(c, listOfCandidates, text);
     }
 
-    void findString(char *currentCharInString, Node *n, string text, vector<pair<int, float> > &frequencyPairs, int position, int offsetFromRoot) {
+    void addToTheTable(Node *n, vector<pair<int, int> > &frequencyPairs, int offsetFromRoot, string text){
+        //increase values of pair's position (first) by 1
+        pair<int, int> *max = nullptr;
+        if(frequencyPairs.size() > 0){
+            max = &frequencyPairs[0];
+        }
+        vector<int> suffixIndicesCopy;
+        suffixIndicesCopy = n->suffixIndices;
+        int i = 0;
+        for(auto &frequencyPair: frequencyPairs){
+            //erase pair with position bigger than size
+            while(frequencyPair.first + 1> text.size()){
+                frequencyPairs.erase(frequencyPairs.begin() + i);
+            }
+            frequencyPair.first = frequencyPair.first + 1;
+            //check suffix index to increase frequency value
+            for(int j = 0; j < suffixIndicesCopy.size(); j++){
+                if(frequencyPair.first == suffixIndicesCopy[j] + offsetFromRoot){
+                    //frequencyPair.first = n->suffixIndices[i];
+                    suffixIndicesCopy.erase(suffixIndicesCopy.begin() + j);
+                    frequencyPair.second++;
+                    break;
+                }
+            }
+
+            //remember the element with maximum frequency
+            if(frequencyPair.second > max->second ||(frequencyPair.second == max->second && frequencyPair.first < max->first)){
+                max = &frequencyPair;
+            }
+            i++;
+        }
+        //move max to the first place
+        if(max != nullptr && max != &frequencyPairs[0])
+            iter_swap(frequencyPairs.begin(), max);
+
+        //not in the vector, need to be added
+        for(int i = 0; i < suffixIndicesCopy.size(); i++){
+            frequencyPairs.emplace_back(suffixIndicesCopy[i], 1);
+        }
+    }
+
+    void findString(char *currentCharInString, Node *n, string pattern, vector<pair<int, int> > &frequencyPairs, int position, int offsetFromRoot, string text) {
         int edgeOffset = 0;
-        for (auto const &node: n->children){
+        bool found = false;
+        for (auto &node: n->children){
             //offset is for edge
             char currentCharOnEdge = text.at(node.second->first - 1 + edgeOffset);
+
             if(*currentCharInString == currentCharOnEdge){
-                //increase values of pair's position (first) by 1
-                int i = 0;
-                for(auto &frequencyPair: frequencyPairs){
-                    frequencyPair.first = frequencyPair.first + 1;
-                    if(frequencyPair.first == n->suffixIndices[i] + offsetFromRoot){
-                        //frequencyPair.first = n->suffixIndices[i] ;
-                        frequencyPair.second++;
-                    }
-                    i++;
-                }
-
-
+                found = true;
+                addToTheTable(node.second, frequencyPairs, offsetFromRoot, text);
                 cout << "same";
                 currentCharInString++;
                 //if all chars on the edge are examined go to the child node
                 if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
-                    findString(currentCharInString, node.second, text, frequencyPairs, position + 1, offsetFromRoot + 1);
+                    findString(currentCharInString, node.second, pattern, frequencyPairs, position + 1, offsetFromRoot + 1, text);
                 }
                 //if not, continue examining char on the edge
                 else {
@@ -323,11 +361,16 @@ public:
                     continue;
                 }
             }
-            else {
+            else if (edgeOffset != 0){
                 cout << "dif";
-                currentCharInString++;
-                findString(currentCharInString, root, text, frequencyPairs, position + 1, offsetFromRoot + 1);
+                //currentCharInString++;
+                findString(currentCharInString, root, pattern, frequencyPairs, position + 1, 0, text);
             }
+        }
+        if(!found){
+            cout << "dif";
+            //currentCharInString++;
+            findString(currentCharInString, root, pattern, frequencyPairs, position + 1, 0, text);
         }
     }
 
@@ -444,17 +487,18 @@ string notes2 = "d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.
 
 int main() {
     cout << "Hello, World!" << endl;
-    /*
-     * SuffixTree sf;
+    ///*
+    SuffixTree sf;
     if( remove( ".././output.txt" ) != 0 )
         perror( "Error deleting file" );
     else
         puts( "File successfully deleted" );
-    sf.buildTree(notes);*/
+    sf.buildTree(notes);
+     //*/
 
     //changeStringDeletion(notes, 3);
 
-    mapScoreToString(notes2);
+    //mapScoreToString(notes2);
 
     return 0;
 }
