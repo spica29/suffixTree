@@ -309,8 +309,11 @@ public:
         int i = 0;
         for(auto &frequencyPair: frequencyPairs){
             //erase pair with position bigger than size
-            while(frequencyPair.first + 1> text.size()){
+            while(frequencyPair.first + 1 > text.size()){
                 frequencyPairs.erase(frequencyPairs.begin() + i);
+                if(frequencyPairs.begin() + i == frequencyPairs.end()){
+                    break;
+                }
             }
             frequencyPair.first = frequencyPair.first + 1;
             //check suffix index to increase frequency value
@@ -341,6 +344,7 @@ public:
 
     void findString(char *currentCharInPattern, Node *n, string pattern, vector<pair<int, int> > &frequencyPairs, int position, int offsetFromRoot, string text, int edgeOffset) {
         bool found = false;
+        if(pattern[pattern.size()] == *currentCharInPattern) return;
         for (auto &node: n->children){
             //offset is for edge
             char currentCharOnEdge = text.at(node.second->first - 1 + edgeOffset);
