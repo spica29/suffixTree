@@ -364,16 +364,14 @@ public:
                 //if all chars on the edge are examined go to the child node
                 if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
                     findString(currentCharInPattern, node.second, pattern, frequencyPairs, position + 1, offsetFromRoot + 1, text, 0);
+                    break;
                 }
                 //if not, continue examining char on the edge
                 else {
                     edgeOffset++;
                     findString(currentCharInPattern, n, pattern, frequencyPairs, position + 1, offsetFromRoot + 1, text, edgeOffset);
+                    break;
                 }
-            }
-
-            else if (edgeOffset != 0){
-                findString(currentCharInPattern, root, pattern, frequencyPairs, position + 1, 0, text, 0);
             }
         }
         if(!found){
