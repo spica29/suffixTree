@@ -279,7 +279,7 @@ public:
         int *child_num = new int(1);
         printGraphvizDFS(root, text);
 
-        string matchSubstitution = "ababaxabcd";
+        string matchSubstitution = "abzbabaxabcd";
         cout << "pattern:" << matchSubstitution << ", size of pattern: " << matchSubstitution.length() << endl;
         char *c = &matchSubstitution.at(0);
         //vector<NodeTable> nodeTable;
@@ -290,7 +290,8 @@ public:
         }
         */
         //first function
-        findString(c, root, matchSubstitution, frequencyPair, 1, 0, text, 0);
+        //findStringSecond(c, root, matchSubstitution, frequencyPair, 1, 0, text, 0);
+        findStringFirst(c, root, matchSubstitution, 1, text, 0);
 
         //second function
         //vector<NodePointer> listOfCandidates;
@@ -342,7 +343,47 @@ public:
         }
     }
 
-    void findString(char *currentCharInPattern, Node *n, string pattern, vector<pair<int, int> > &frequencyPairs, int position, int offsetFromRoot, string text, int edgeOffset) {
+    void findStringFirst(char *currentCharInPattern, Node *n, string pattern, int position, string text, int edgeOffset) {
+        bool found = false;
+        if(pattern[pattern.size()] == *currentCharInPattern) return;
+        for (auto &node: n->children){
+            //offset is for edge
+            char currentCharOnEdge = text.at(node.second->first - 1 + edgeOffset);
+            if(!(*currentCharInPattern == currentCharOnEdge)) {
+                //pointer already showing on the char on the edge, don't check neighbours
+                if(edgeOffset != 0){
+                    break;
+                }
+                continue;
+            }
+
+            if(*currentCharInPattern == currentCharOnEdge){
+                found = true;
+                cout << " char in pattern: " << *currentCharInPattern << ", predicted char: " << text[node.second->first + edgeOffset] << endl;
+                currentCharInPattern++;
+                //if all chars on the edge are examined go to the child node
+                if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
+                    findStringFirst(currentCharInPattern, node.second, pattern, position + 1, text, 0);
+                    break;
+                }
+                    //if not, continue examining char on the edge
+                else {
+                    edgeOffset++;
+                    findStringFirst(currentCharInPattern, n, pattern, position + 1, text, edgeOffset);
+                    break;
+                }
+            }
+        }
+
+        //check case when char from pattern is not in the alphabet
+        if(!found){
+            if(n == root)
+                currentCharInPattern++;
+            findStringFirst(currentCharInPattern, root, pattern, position + 1, text, 0);
+        }
+    }
+
+    void findStringSecond(char *currentCharInPattern, Node *n, string pattern, vector<pair<int, int> > &frequencyPairs, int position, int offsetFromRoot, string text, int edgeOffset) {
         bool found = false;
         if(pattern[pattern.size()] == *currentCharInPattern) return;
         for (auto &node: n->children){
@@ -359,23 +400,28 @@ public:
             if(*currentCharInPattern == currentCharOnEdge){
                 found = true;
                 addToTheTable(node.second, frequencyPairs, offsetFromRoot, text);
-                cout << " char in pattern: " << *currentCharInPattern << " max position: " << frequencyPairs[0].first << endl;
+                int max = frequencyPairs[0].first;
+                cout << " char in pattern: " << *currentCharInPattern << " max position: " << max << ", predicted char: " << text[max] << endl;
                 currentCharInPattern++;
                 //if all chars on the edge are examined go to the child node
                 if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
-                    findString(currentCharInPattern, node.second, pattern, frequencyPairs, position + 1, offsetFromRoot + 1, text, 0);
+                    findStringSecond(currentCharInPattern, node.second, pattern, frequencyPairs, position + 1, offsetFromRoot + 1, text, 0);
                     break;
                 }
                 //if not, continue examining char on the edge
                 else {
                     edgeOffset++;
-                    findString(currentCharInPattern, n, pattern, frequencyPairs, position + 1, offsetFromRoot + 1, text, edgeOffset);
+                    findStringSecond(currentCharInPattern, n, pattern, frequencyPairs, position + 1, offsetFromRoot + 1, text, edgeOffset);
                     break;
                 }
             }
         }
+
+        //check case when char from pattern is not in the alphabet
         if(!found){
-            findString(currentCharInPattern, root, pattern, frequencyPairs, position + 1, 0, text, 0);
+            if(n == root)
+                currentCharInPattern++;
+            findStringSecond(currentCharInPattern, root, pattern, frequencyPairs, position + 1, 0, text, 0);
         }
     }
 
@@ -463,7 +509,7 @@ string changeStringDeletion(string pattern, int k){
     return pattern;
 }
 
-void mapScoreToString(string score){
+string mapScoreToString(string score){
     map<string, char> mapScore;
     char letter = 'a';
     for (int i = 0; i < score.size(); i = i + 3) {
@@ -484,14 +530,20 @@ void mapScoreToString(string score){
     }
 
     cout << scoreShorten;
+
+    return scoreShorten;
 }
 
 string notes = "abcabaxabcd";
 
 string notes2 = "d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.e3.f3#e3.e3.f3#e3.d3.d3.e3.f3#e3.a3.a3.d3.b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.c3#c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.e3.d3.c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.c3#c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.e3.d3.c3#b2.f2#g2.f2#a2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.d2.f2#a2.d2.f2#g2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#e2.e2.d2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#g2.a2.d2.f2#a2.d2.f2#g2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#e2.d2.f2#g2.f2#e2.d2.f2#a2.d2.f2#a2.d2.f2#g2.f2#e2.e2.d2.f2#g2.f2#e2.a1.d2.a2.a1.d2.a2.a1.d2.g2.a1.d2.g2.a1.d2.f2#a1.d2.f2#a1.d2.g2.a1.d2.d3.d2.a2.d3.d2.a2.d3.d2.g2.d3.d2.g2.d3.d2.f2#d3.d2.f2#d3.d2.g2.d3.d2.g2.d3.f2#a2.d3.f2#a2.d3.e2.g2.d3.e2.g2.d3.d2.f2#d3.d2.f2#d3.d2.g2.d3.d2.g2.d3.f2#d3.f2#d3.f2#d3.e2.d3.e2.d3.e2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.f3#b2.g3.a3.c3#d3.b3.f3#e3.a3.c3#d3.b3.f3#e3.d3.c3#a2.f3#b2.g3.a3.c3#d3.b2.b2.d2.d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.e3.f3#e3.e3.f3#e3.d3.d3.e3.f3#e3.a3.a3.d3.b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.c3#d3.d3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.e3.d3.d3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.f3#a3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.d3.d3.f3#g3.f3#e3.d3.f3#a3.a3.f3#g3.f3#e3.d3.d3.f3#g3.f3#e3.a3.a2.d3.a3.a2.d3.a3.a2.d3.g3.a2.d3.g3.a2.d3.f3#a2.d3.f3#g2.a2.d3.g2.a2.a3.a2.d3.a3.a2.d3.a3.a2.d3.g3.a2.d3.g3.a2.d3.f3#a2.d3.f3#a2.d3.g3.a2.d3.d4.d3.a3.d4.d3.g3.d4.d3.g3.d4.d3.f3#d4.d3.f3#d4.d3.g3.d4.d3.g3.d4.d3.a3.d4.d3.a3.d4.d3.g3.d4.d3.g3.d4.d3.f3#d4.d3.f3#d4.d3.g3.d4.d3.g3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d3.";
 
+string notes3 = "d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.e3.f3#e3.e3.f3#e3.d3.d3.e3.f3#e3.a3.a3.d3.b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#";
+
 int main() {
     cout << "Hello, World!" << endl;
+
+    //notes = mapScoreToString(notes3);
     ///*
     SuffixTree sf;
     if( remove( ".././output.txt" ) != 0 )
