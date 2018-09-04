@@ -279,7 +279,7 @@ public:
         int *child_num = new int(1);
         printGraphvizDFS(root, text);
 
-        string matchSubstitution = "abzbabaxabcd";
+        string matchSubstitution = "bbabaxabcd";
         cout << "pattern:" << matchSubstitution << ", size of pattern: " << matchSubstitution.length() << endl;
         char *c = &matchSubstitution.at(0);
         //vector<NodeTable> nodeTable;
@@ -290,8 +290,8 @@ public:
         }
         */
         //first function
-        //findStringSecond(c, root, matchSubstitution, frequencyPair, 1, 0, text, 0);
-        findStringFirst(c, root, matchSubstitution, 1, text, 0);
+        findStringSecond(c, root, matchSubstitution, frequencyPair, 1, 0, text, 0);
+        //findStringFirst(c, root, matchSubstitution, 1, text, 0, 0);
 
         //second function
         //vector<NodePointer> listOfCandidates;
@@ -343,7 +343,7 @@ public:
         }
     }
 
-    void findStringFirst(char *currentCharInPattern, Node *n, string pattern, int position, string text, int edgeOffset) {
+    void findStringFirst(char *currentCharInPattern, Node *n, string pattern, int position, string text, int edgeOffset, int offsetFromRoot) {
         bool found = false;
         if(pattern[pattern.size()] == *currentCharInPattern) return;
         for (auto &node: n->children){
@@ -359,17 +359,27 @@ public:
 
             if(*currentCharInPattern == currentCharOnEdge){
                 found = true;
-                cout << " char in pattern: " << *currentCharInPattern << ", predicted char: " << text[node.second->first + edgeOffset] << endl;
+                int min_pos = -1;
+                //take the smallest suffix index bigger than position
+                for(int i = 0; i < node.second->suffixIndices.size(); i++){
+                    int currentPosition = node.second->suffixIndices[i] + offsetFromRoot;
+                    if(position <= currentPosition){
+                       min_pos = currentPosition;
+                       break;
+                    }
+                }
+                cout << " char in pattern: " << *currentCharInPattern << " char in pattern position: " << position << ", predicted char position: " << min_pos << endl;
+                //cout << " char in pattern: " << *currentCharInPattern << ", predicted char: " << text[node.second->first + edgeOffset] << endl;
                 currentCharInPattern++;
                 //if all chars on the edge are examined go to the child node
                 if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
-                    findStringFirst(currentCharInPattern, node.second, pattern, position + 1, text, 0);
+                    findStringFirst(currentCharInPattern, node.second, pattern, position + 1, text, 0, offsetFromRoot + 1);
                     break;
                 }
                     //if not, continue examining char on the edge
                 else {
                     edgeOffset++;
-                    findStringFirst(currentCharInPattern, n, pattern, position + 1, text, edgeOffset);
+                    findStringFirst(currentCharInPattern, n, pattern, position + 1, text, edgeOffset, offsetFromRoot + 1);
                     break;
                 }
             }
@@ -377,9 +387,11 @@ public:
 
         //check case when char from pattern is not in the alphabet
         if(!found){
-            if(n == root)
+            if(n == root){
                 currentCharInPattern++;
-            findStringFirst(currentCharInPattern, root, pattern, position + 1, text, 0);
+                position++;
+            }
+            findStringFirst(currentCharInPattern, root, pattern, position, text, 0, 0);
         }
     }
 
@@ -401,7 +413,8 @@ public:
                 found = true;
                 addToTheTable(node.second, frequencyPairs, offsetFromRoot, text);
                 int max = frequencyPairs[0].first;
-                cout << " char in pattern: " << *currentCharInPattern << " max position: " << max << ", predicted char: " << text[max] << endl;
+                cout << " char in pattern: " << *currentCharInPattern << " char in pattern position: " << position << ", predicted char position: " << max << endl;
+                //cout << " char in pattern: " << *currentCharInPattern << " max position: " << max << ", predicted char: " << text[max] << endl;
                 currentCharInPattern++;
                 //if all chars on the edge are examined go to the child node
                 if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
@@ -419,9 +432,11 @@ public:
 
         //check case when char from pattern is not in the alphabet
         if(!found){
-            if(n == root)
+            if(n == root){
                 currentCharInPattern++;
-            findStringSecond(currentCharInPattern, root, pattern, frequencyPairs, position + 1, 0, text, 0);
+                position++;
+            }
+            findStringSecond(currentCharInPattern, root, pattern, frequencyPairs, position, 0, text, 0);
         }
     }
 
@@ -536,9 +551,9 @@ string mapScoreToString(string score){
 
 string notes = "abcabaxabcd";
 
-string notes2 = "d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.e3.f3#e3.e3.f3#e3.d3.d3.e3.f3#e3.a3.a3.d3.b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.c3#c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.e3.d3.c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.c3#c3#b2.d3.c3#d3.d2.d3.c3#d3.c2#e3.d3.e3.d3.c3#b2.f2#g2.f2#a2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.d2.f2#a2.d2.f2#g2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#e2.e2.d2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#g2.a2.d2.f2#a2.d2.f2#g2.f2#g2.f2#g2.a2.f2#g2.f2#g2.a2.b2.a2.g2.f2#e2.d2.f2#g2.f2#e2.d2.f2#a2.d2.f2#a2.d2.f2#g2.f2#e2.e2.d2.f2#g2.f2#e2.a1.d2.a2.a1.d2.a2.a1.d2.g2.a1.d2.g2.a1.d2.f2#a1.d2.f2#a1.d2.g2.a1.d2.d3.d2.a2.d3.d2.a2.d3.d2.g2.d3.d2.g2.d3.d2.f2#d3.d2.f2#d3.d2.g2.d3.d2.g2.d3.f2#a2.d3.f2#a2.d3.e2.g2.d3.e2.g2.d3.d2.f2#d3.d2.f2#d3.d2.g2.d3.d2.g2.d3.f2#d3.f2#d3.f2#d3.e2.d3.e2.d3.e2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.d2.d3.f3#b2.g3.a3.c3#d3.b3.f3#e3.a3.c3#d3.b3.f3#e3.d3.c3#a2.f3#b2.g3.a3.c3#d3.b2.b2.d2.d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.e3.f3#e3.e3.f3#e3.d3.d3.e3.f3#e3.a3.a3.d3.b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.c3#d3.d3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.e3.d3.d3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.f3#a3.a3.f3#g3.f3#g3.a3.f3#g3.f3#g3.a3.b3.a3.g3.f3#e3.d3.d3.f3#g3.f3#e3.d3.f3#a3.a3.f3#g3.f3#e3.d3.d3.f3#g3.f3#e3.a3.a2.d3.a3.a2.d3.a3.a2.d3.g3.a2.d3.g3.a2.d3.f3#a2.d3.f3#g2.a2.d3.g2.a2.a3.a2.d3.a3.a2.d3.a3.a2.d3.g3.a2.d3.g3.a2.d3.f3#a2.d3.f3#a2.d3.g3.a2.d3.d4.d3.a3.d4.d3.g3.d4.d3.g3.d4.d3.f3#d4.d3.f3#d4.d3.g3.d4.d3.g3.d4.d3.a3.d4.d3.a3.d4.d3.g3.d4.d3.g3.d4.d3.f3#d4.d3.f3#d4.d3.g3.d4.d3.g3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d4.d3.d3.";
+string notes2 = "d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.c5#c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.e5.d5.c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.c5#c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.e5.d5.c5#b4.f4#g4.f4#a4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.d4.f4#a4.d4.f4#g4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#e4.e4.d4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#g4.a4.d4.f4#a4.d4.f4#g4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#e4.d4.f4#g4.f4#e4.d4.f4#a4.d4.f4#a4.d4.f4#g4.f4#e4.e4.d4.f4#g4.f4#e4.a1.d4.a4.a1.d4.a4.a1.d4.g4.a1.d4.g4.a1.d4.f4#a1.d4.f4#a1.d4.g4.a1.d4.d5.d4.a4.d5.d4.a4.d5.d4.g4.d5.d4.g4.d5.d4.f4#d5.d4.f4#d5.d4.g4.d5.d4.g4.d5.f4#a4.d5.f4#a4.d5.e4.g4.d5.e4.g4.d5.d4.f4#d5.d4.f4#d5.d4.g4.d5.d4.g4.d5.f4#d5.f4#d5.f4#d5.e4.d5.e4.d5.e4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.f5#b4.g5.a5.c5#d5.b5.f5#e5.a5.c5#d5.b5.f5#e5.d5.c5#a4.f5#b4.g5.a5.c5#d5.b4.b4.d4.d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.c5#d5.d5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.e5.d5.d5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.f5#a5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.d5.d5.f5#g5.f5#e5.d5.f5#a5.a5.f5#g5.f5#e5.d5.d5.f5#g5.f5#e5.a5.a4.d5.a5.a4.d5.a5.a4.d5.g5.a4.d5.g5.a4.d5.f5#a4.d5.f5#g4.a4.d5.g4.a4.a5.a4.d5.a5.a4.d5.a5.a4.d5.g5.a4.d5.g5.a4.d5.f5#a4.d5.f5#a4.d5.g5.a4.d5.d6.d5.a5.d6.d5.g5.d6.d5.g5.d6.d5.f5#d6.d5.f5#d6.d5.g5.d6.d5.g5.d6.d5.a5.d6.d5.a5.d6.d5.g5.d6.d5.g5.d6.d5.f5#d6.d5.f5#d6.d5.g5.d6.d5.g5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d5.";
 
-string notes3 = "d3.c3#c3#b2.b2.c3#d3.c3#b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#b2.d3.e3.f3#e3.e3.f3#e3.d3.d3.e3.f3#e3.a3.a3.d3.b2.c3#b2.c3#d3.c3#c3#d3.c3#d3.c3#b2.b2.c3#d3.c3#e3.d3.c3#";
+string notes3 = "d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#";
 
 int main() {
     cout << "Hello, World!" << endl;
