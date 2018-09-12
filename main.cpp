@@ -268,7 +268,7 @@ public:
         delete(n);
     }
 
-    void buildTree(string text) {
+    void buildTree(string text, string pattern) {
         rootEnd = new int(0);
         root = new Node();
         root->first = 0;
@@ -290,16 +290,16 @@ public:
         int *child_num = new int(1);
         printGraphvizDFS(root, text);
 
-        string matchSubstitution = "Abbccbabcbcxbabbababccbabdabcaxdeddedaadedffacbxcbabbababccbabdab";
-        cout << "pattern:" << matchSubstitution << ", size of pattern: " << matchSubstitution.length() << endl;
-        char *c = &matchSubstitution.at(0);
+        //string matchSubstitution = "abdabaxabcd";
+        //cout << "pattern:" << matchSubstitution << ", size of pattern: " << matchSubstitution.length() << endl;
+        char *c = &pattern.at(0);
         //vector<NodeTable> nodeTable;
         vector<pair <int, float> >frequencyPair;
 
         //first function
-        findStringFirst(c, root, matchSubstitution, 1, text, 0, 0 , -1, 0);
+        findStringFirst(c, root, 0, pattern, text);
         writeInFile("\n", ".././results.txt");
-        findStringSecond(c, root, matchSubstitution, frequencyPair, text);
+        findStringSecond(c, root, 0, pattern, frequencyPair, text);
 
 
         //second function
@@ -308,102 +308,148 @@ public:
         //findStringWithPointers(c, listOfCandidates, text);
     }
 
-    void addToTheTable(Node *n, vector<pair<int, float> > &frequencyPairs, int offsetFromRoot, string text, int numberOfCorrect){
+    void addToTheTable(Node *n, vector<pair<int, float> > &frequencyPairs, int offsetFromRoot, string text, int numberOfCorrect, int &lastMax){
         //increase values of pair's position (first) by 1
         pair<int, float> *max = nullptr;
         if(frequencyPairs.size() > 0){
             max = &frequencyPairs[0];
         }
+        bool added = false;
         vector<int> suffixIndicesCopy;
         suffixIndicesCopy = n->suffixIndices;
-        int i = 0;
-        for(auto &frequencyPair: frequencyPairs){
+        //int i = 0;
+        //for(auto &frequencyPair: frequencyPairs){
+        for(int i = 0; i < frequencyPairs.size(); i++){
             //erase pair with position bigger than size
-            while(frequencyPair.first + 1 > text.size()){
+            /*
+            if(frequencyPair.first + 1 > text.size()){
                 frequencyPairs.erase(frequencyPairs.begin() + i);
-                if(frequencyPairs.begin() + i == frequencyPairs.end()){
-                    break;
+                continue;
+            }*/
+            //check if returned to the root/mistake happened
+            //if true add one more element which is the last maximum in the iteration before coming back to the root
+            if(offsetFromRoot == 0 && frequencyPairs.size() > 1 && frequencyPairs[i].first == lastMax && i == 0){
+                pair<int, float> newPair = make_pair(frequencyPairs[i].first - 1, frequencyPairs[i].second);
+                pair<int, float> newPair2 = make_pair(frequencyPairs[i].first + 1, frequencyPairs[i].second);
+                frequencyPairs.insert(frequencyPairs.end(), newPair2);
+                frequencyPairs.insert(frequencyPairs.end(), newPair);
+                //max = &frequencyPair;
+                //cout << "size " << frequencyPairs.size();
+                added = true;
+            }
+
+            if(added){
+                if(frequencyPairs[i].first == frequencyPairs[frequencyPairs.size() - 1].first && i != frequencyPairs.size() - 1){
+                    frequencyPairs.erase(frequencyPairs.begin() + i);
+                }
+                if(frequencyPairs[i].first == frequencyPairs[frequencyPairs.size() - 2].first && i != frequencyPairs.size() - 2){
+                    frequencyPairs.erase(frequencyPairs.begin() + i);
                 }
             }
-            frequencyPair.first = frequencyPair.first + 1;
-            frequencyPair.second = 0.9 * frequencyPair.second;
+
+            frequencyPairs[i].first = frequencyPairs[i].first + 1;
+            if(added && i == 0 ) frequencyPairs[i].second += 1;
             //check suffix index to increase frequency value
             for(int j = 0; j < suffixIndicesCopy.size(); j++){
-                if(frequencyPair.first == suffixIndicesCopy[j] + offsetFromRoot){
+                if(frequencyPairs[i].first == suffixIndicesCopy[j] + offsetFromRoot){
                     //frequencyPair.first = n->suffixIndices[i];
                     suffixIndicesCopy.erase(suffixIndicesCopy.begin() + j);
-                    frequencyPair.second += 1;
+                    //if(added && i == 0 ) frequencyPair.second += 2;
+                    //else
+                        frequencyPairs[i].second += 1;
                     break;
                 }
             }
 
             //remember the element with maximum frequency
-            if((frequencyPair.second > max->second ||(frequencyPair.second == max->second && frequencyPair.first < max->first)) && frequencyPair.second >= numberOfCorrect){
-                max = &frequencyPair;
+            if((frequencyPairs[i].second > max->second ||(frequencyPairs[i].second == max->second && frequencyPairs[i].first < max->first))){
+                //if(added && i == 0) continue;
+                max = &frequencyPairs[i];
+                /*
+                if(i == frequencyPairs.size() - 2){
+                    if((frequencyPairs[frequencyPairs.size() - 1].second > max->second ||(frequencyPairs[frequencyPairs.size() - 1].second == max->second && frequencyPairs[frequencyPairs.size() - 1].first < max->first))){
+                        max = &frequencyPairs[frequencyPairs.size() - 1];
+                    }
+                    if((frequencyPairs[frequencyPairs.size() - 2].second > max->second ||(frequencyPairs[frequencyPairs.size() - 2].second == max->second && frequencyPairs[frequencyPairs.size() - 2].first < max->first))){
+                        max = &frequencyPairs[frequencyPairs.size() - 2];
+                    }
+                }
+                 */
             }
-            i++;
+            //i++;
         }
         //move max to the first place
-        if(max != nullptr && max != &frequencyPairs[0])
+        if(max != nullptr && max != &frequencyPairs[0]){
             iter_swap(frequencyPairs.begin(), max);
+        }
 
         //not in the vector, need to be added
         for(int i = 0; i < suffixIndicesCopy.size(); i++){
             frequencyPairs.emplace_back(suffixIndicesCopy[i], 1);
         }
+        lastMax = frequencyPairs[0].first;
     }
 
-    void findStringFirst(char *currentCharInPattern, Node *n, string pattern, int position, string text, int edgeOffset, int offsetFromRoot, int suffixIndexOfEdge, int numberOfCorrect) {
+    void findStringFirst(char *currentCharInPattern, Node *n, Node *child, string pattern, string text, int position = 1, int edgeOffset = 0, int offsetFromRoot = 0, int suffixIndexOfEdge = -1, int numberOfCorrect = 0, int min_pos = -1) {
         bool found = false;
         if(pattern[pattern.size()] == *currentCharInPattern) return;
         for (auto &node: n->children){
             //offset is for edge
+            if(node.second->first == text.size() || (node.second->first - 1 + edgeOffset >= text.size())) continue;
             char currentCharOnEdge = text.at(node.second->first - 1 + edgeOffset);
-            if(!(*currentCharInPattern == currentCharOnEdge)) {
+            if(*currentCharInPattern != currentCharOnEdge || (node.second != child && child != 0)) {
                 //pointer already showing on the char on the edge, don't check neighbours
-                if(edgeOffset != 0){
+                if(edgeOffset != 0 && node.second == child){
                     break;
                 }
                 continue;
             }
+            /*
             if(find(node.second->suffixIndices.begin(), node.second->suffixIndices.end(), suffixIndexOfEdge) == node.second->suffixIndices.end() && suffixIndexOfEdge != -1){
-                position--; //skip the char
-                numberOfCorrect--;
+                //position--; //skip the char
+                //numberOfCorrect--;
                 continue;
             }
-            int min_pos = -1;
-            int suffix = -1;
-            //take the smallest suffix index bigger than position
-            for(int i = 0; i < node.second->suffixIndices.size(); i++){
-                suffix = node.second->suffixIndices[i];
-                int currentPosition = suffix + offsetFromRoot;
-                if(numberOfCorrect <= currentPosition){
-                    min_pos = currentPosition;
-                    break;
+            */
+            else {
+                int suffix = -1;
+                //take the smallest suffix index bigger than position
+                for(int i = 0; i < node.second->suffixIndices.size(); i++){
+                    suffix = node.second->suffixIndices[i];
+                    int currentPosition = suffix + offsetFromRoot;
+                    if(numberOfCorrect <= currentPosition){
+                        min_pos = currentPosition;
+                        break;
+                    } else if (i == node.second->suffixIndices.size()-1) {
+                        min_pos = currentPosition;
+                    }
                 }
-            }
-            if(*currentCharInPattern == currentCharOnEdge){
-                //if(min_pos == -1) //from this char can't be continued, but will still try to predict
+                //if(*currentCharInPattern == currentCharOnEdge) {
+                    //if(min_pos == -1) //from this char can't be continued, but will still try to predict
 
                 found = true;
                 numberOfCorrect++;
-                cout << " char in pattern: " << *currentCharInPattern << " char in pattern position: " << position << ", predicted char position: " << min_pos << endl;
+                cout << " char in pattern: " << *currentCharInPattern << " char in pattern position: " << position
+                     << ", predicted char position: " << min_pos << endl;
                 //cout <<"next char in pattern position: " << position + 1 << ", predicted char position: " << min_pos << endl;
-                int difference = min_pos - position;
+                //int difference = min_pos - position;
                 string fullname = ".././results.txt";
-                writeInFile(std::to_string(difference), fullname);
+                writeInFile(std::to_string(min_pos), fullname);
                 //cout << " char in pattern: " << *currentCharInPattern << ", predicted char: " << text[node.second->first + edgeOffset] << endl;
                 currentCharInPattern++;
                 //if all chars on the edge are examined go to the child node
-                if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
-                    findStringFirst(currentCharInPattern, node.second, pattern, position + 1, text, 0, offsetFromRoot + 1, suffix, numberOfCorrect);
+                if (node.second->first - 1 + edgeOffset == *node.second->last - 1) {
+                    findStringFirst(currentCharInPattern, node.second, 0, pattern, text, position + 1, 0,
+                                    offsetFromRoot + 1, suffix, numberOfCorrect, min_pos);
                     break;
                 }
                     //if not, continue examining char on the edge
                 else {
                     edgeOffset++;
-                    findStringFirst(currentCharInPattern, n, pattern, position + 1, text, edgeOffset, offsetFromRoot + 1, suffix, numberOfCorrect);
+                    findStringFirst(currentCharInPattern, n, node.second, pattern, text, position + 1, edgeOffset,
+                                    offsetFromRoot + 1, suffix, numberOfCorrect, min_pos);
                     break;
+                    //}
                 }
             }
         }
@@ -411,22 +457,31 @@ public:
         //check case when char from pattern is not in the alphabet
         if(!found){
             if(n == root && edgeOffset == 0){
+                if(min_pos == -1)
+                    min_pos = 1;
+                else min_pos = min_pos + 1;
+                cout << " char in pattern: " << *currentCharInPattern << " char in pattern position: " << position << ", predicted char position: " << min_pos << endl;
+                //cout <<"next char in pattern position: " << position + 1 << ", predicted char position: " << min_pos << endl;
+                int difference = min_pos - position;
+                string fullname = ".././results.txt";
+                writeInFile(std::to_string(difference), fullname);
                 currentCharInPattern++;
                 position++;
             }
-            findStringFirst(currentCharInPattern, root, pattern, position, text, 0, 0, -1, numberOfCorrect);
+            findStringFirst(currentCharInPattern, root, 0, pattern, text, position, 0, 0, -1, numberOfCorrect, min_pos);
         }
     }
 
-    void findStringSecond(char *currentCharInPattern, Node *n, string pattern, vector<pair<int, float> > &frequencyPairs, string text, int position = 1, int offsetFromRoot = 0, int edgeOffset = 0, int numberOfCorrect = 0) {
+    void findStringSecond(char *currentCharInPattern, Node *n, Node *child, string pattern, vector<pair<int, float> > &frequencyPairs, string text, int position = 1, int offsetFromRoot = 0, int edgeOffset = 0, int numberOfCorrect = 0, int lastMax = -1) {
         bool found = false;
         if(pattern[pattern.size()] == *currentCharInPattern) return;
         for (auto &node: n->children){
             //offset is for edge
+            if(node.second->first == text.size() || (node.second->first - 1 + edgeOffset >= text.size())) continue;
             char currentCharOnEdge = text.at(node.second->first - 1 + edgeOffset);
-            if(!(*currentCharInPattern == currentCharOnEdge)) {
+            if(*currentCharInPattern != currentCharOnEdge || (node.second != child && child != 0)) {
                 //pointer already showing on the char on the edge, don't check neighbours
-                if(edgeOffset != 0){
+                if(edgeOffset != 0 && node.second == child){
                     break;
                 }
                 continue;
@@ -434,24 +489,25 @@ public:
             else {
                 found = true;
                 numberOfCorrect++;
-                addToTheTable(node.second, frequencyPairs, offsetFromRoot, text, numberOfCorrect);
+                addToTheTable(node.second, frequencyPairs, offsetFromRoot, text, numberOfCorrect, lastMax);
                 int max = frequencyPairs[0].first;
                 //cout << " char in pattern: " << *currentCharInPattern << " char in pattern position: " << position << ", predicted char position: " << max << endl;
                 cout <<"next char in pattern position: " << position << ", predicted char position: " << max << endl;
-                int difference = max - position;
+                //int difference = max - position;
                 string fullname = ".././results.txt";
-                writeInFile(std::to_string(difference), fullname);
+                writeInFile(std::to_string(max), fullname);
                 //cout << " char in pattern: " << *currentCharInPattern << " max position: " << max << ", predicted char: " << text[max] << endl;
                 currentCharInPattern++;
                 //if all chars on the edge are examined go to the child node
                 if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
-                    findStringSecond(currentCharInPattern, node.second, pattern, frequencyPairs, text, position + 1, offsetFromRoot + 1, 0, numberOfCorrect);
+                    findStringSecond(currentCharInPattern, node.second, 0, pattern, frequencyPairs, text, position + 1, offsetFromRoot + 1, 0, numberOfCorrect, lastMax);
                     break;
                 }
                 //if not, continue examining char on the edge
                 else {
                     edgeOffset++;
-                    findStringSecond(currentCharInPattern, n, pattern, frequencyPairs, text, position + 1, offsetFromRoot + 1, edgeOffset, numberOfCorrect);
+                    child = node.second;
+                    findStringSecond(currentCharInPattern, n, child, pattern, frequencyPairs, text, position + 1, offsetFromRoot + 1, edgeOffset, numberOfCorrect, lastMax);
                     break;
                 }
             }
@@ -461,10 +517,19 @@ public:
         //check case when char from pattern is not in the alphabet
         if(!found){
             if(n == root && edgeOffset == 0){
+                int max;
+                if(frequencyPairs.size() == 0){
+                    max = 0;
+                }
+                else max = frequencyPairs[0].first;
+                cout <<"next char in pattern position: " << position << ", predicted char position: " << max + 1 << endl;
+                int difference = max - position;
+                string fullname = ".././results.txt";
+                writeInFile(std::to_string(difference), fullname);
                 currentCharInPattern++;
                 position++;
             }
-            findStringSecond(currentCharInPattern, root, pattern, frequencyPairs, text, position, 0, 0, numberOfCorrect);
+            findStringSecond(currentCharInPattern, root, 0, pattern, frequencyPairs, text, position, 0, 0, numberOfCorrect, lastMax);
         }
     }
 
@@ -523,10 +588,12 @@ string changeStringAddition(string pattern, int k){
     srand((int)time(0));
     for (int i = 0; i < k; i++) {
         int randNum = rand() % pattern.size();
-        pattern.insert(randNum, 1, 'k');
+        int randPosForLetter = rand() % pattern.size();
+        char letter = pattern[randPosForLetter];
+        pattern.insert(randNum, 1, letter);
     }
 
-    cout << pattern;
+    cout << "pattern is : " << pattern << endl;
     return pattern;
 }
 
@@ -534,10 +601,12 @@ string changeStringSubstitution(string pattern, int k){
     srand((int)time(0));
     for (int i = 0; i < k; i++) {
         int randNum = rand() % pattern.size();
-        pattern.replace(randNum, 1, "k");
+        int randPosForLetter = rand() % pattern.size();
+        char letter = pattern[randPosForLetter];
+        pattern.replace(randNum, 1, string(1, letter));
     }
 
-    cout << pattern;
+    cout << "pattern is : " << pattern << endl;
     return pattern;
 }
 
@@ -548,7 +617,7 @@ string changeStringDeletion(string pattern, int k){
         pattern.erase(randNum, 1);
     }
 
-    cout << pattern;
+    cout << "pattern is : " << pattern << endl;
     return pattern;
 }
 
@@ -571,17 +640,16 @@ string mapScoreToString(string score){
         char letter = mapScore.at(note);
         scoreShorten.insert(scoreShorten.size(), 1, letter);
     }
-
-    cout << scoreShorten;
-
     return scoreShorten;
 }
 
-string notes = "abcabaxabcd";
+//string notes = "abcabaxabcd";
 
-string notes2 = "d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.c5#c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.e5.d5.c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.c5#c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.e5.d5.c5#b4.f4#g4.f4#a4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.d4.f4#a4.d4.f4#g4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#e4.e4.d4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#g4.a4.d4.f4#a4.d4.f4#g4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#e4.d4.f4#g4.f4#e4.d4.f4#a4.d4.f4#a4.d4.f4#g4.f4#e4.e4.d4.f4#g4.f4#e4.a1.d4.a4.a1.d4.a4.a1.d4.g4.a1.d4.g4.a1.d4.f4#a1.d4.f4#a1.d4.g4.a1.d4.d5.d4.a4.d5.d4.a4.d5.d4.g4.d5.d4.g4.d5.d4.f4#d5.d4.f4#d5.d4.g4.d5.d4.g4.d5.f4#a4.d5.f4#a4.d5.e4.g4.d5.e4.g4.d5.d4.f4#d5.d4.f4#d5.d4.g4.d5.d4.g4.d5.f4#d5.f4#d5.f4#d5.e4.d5.e4.d5.e4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.f5#b4.g5.a5.c5#d5.b5.f5#e5.a5.c5#d5.b5.f5#e5.d5.c5#a4.f5#b4.g5.a5.c5#d5.b4.b4.d4.d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.c5#d5.d5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.e5.d5.d5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.f5#a5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.d5.d5.f5#g5.f5#e5.d5.f5#a5.a5.f5#g5.f5#e5.d5.d5.f5#g5.f5#e5.a5.a4.d5.a5.a4.d5.a5.a4.d5.g5.a4.d5.g5.a4.d5.f5#a4.d5.f5#g4.a4.d5.g4.a4.a5.a4.d5.a5.a4.d5.a5.a4.d5.g5.a4.d5.g5.a4.d5.f5#a4.d5.f5#a4.d5.g5.a4.d5.d6.d5.a5.d6.d5.g5.d6.d5.g5.d6.d5.f5#d6.d5.f5#d6.d5.g5.d6.d5.g5.d6.d5.a5.d6.d5.a5.d6.d5.g5.d6.d5.g5.d6.d5.f5#d6.d5.f5#d6.d5.g5.d6.d5.g5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d5.";
+//string notes2 = "d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.c5#c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.e5.d5.c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.c5#c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.e5.d5.c5#b4.f4#g4.f4#a4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.d4.f4#a4.d4.f4#g4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#e4.e4.d4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#g4.a4.d4.f4#a4.d4.f4#g4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#e4.d4.f4#g4.f4#e4.d4.f4#a4.d4.f4#a4.d4.f4#g4.f4#e4.e4.d4.f4#g4.f4#e4.a1.d4.a4.a1.d4.a4.a1.d4.g4.a1.d4.g4.a1.d4.f4#a1.d4.f4#a1.d4.g4.a1.d4.d5.d4.a4.d5.d4.a4.d5.d4.g4.d5.d4.g4.d5.d4.f4#d5.d4.f4#d5.d4.g4.d5.d4.g4.d5.f4#a4.d5.f4#a4.d5.e4.g4.d5.e4.g4.d5.d4.f4#d5.d4.f4#d5.d4.g4.d5.d4.g4.d5.f4#d5.f4#d5.f4#d5.e4.d5.e4.d5.e4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.f5#b4.g5.a5.c5#d5.b5.f5#e5.a5.c5#d5.b5.f5#e5.d5.c5#a4.f5#b4.g5.a5.c5#d5.b4.b4.d4.d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.c5#d5.d5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.e5.d5.d5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.f5#a5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.d5.d5.f5#g5.f5#e5.d5.f5#a5.a5.f5#g5.f5#e5.d5.d5.f5#g5.f5#e5.a5.a4.d5.a5.a4.d5.a5.a4.d5.g5.a4.d5.g5.a4.d5.f5#a4.d5.f5#g4.a4.d5.g4.a4.a5.a4.d5.a5.a4.d5.a5.a4.d5.g5.a4.d5.g5.a4.d5.f5#a4.d5.f5#a4.d5.g5.a4.d5.d6.d5.a5.d6.d5.g5.d6.d5.g5.d6.d5.f5#d6.d5.f5#d6.d5.g5.d6.d5.g5.d6.d5.a5.d6.d5.a5.d6.d5.g5.d6.d5.g5.d6.d5.f5#d6.d5.f5#d6.d5.g5.d6.d5.g5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d5.";
 
-string notes3 = "d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#";
+//string notes3 = "d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#";
+
+string notesTwinkle = "c4.c4.g4.g4.a4.a4.g4.f4.f4.e4.e4.d4.d4.c4.g4.g4.f4.f4.e4.e4.d4.g4.g4.f4.f4.e4.e4.d4.c4.c4.g4.g4.a4.a4.g4.f4.f4.e4.e4.d4.d4.c4.";
 
 int main() {
     cout << "Hello, World!" << endl;
@@ -590,17 +658,26 @@ int main() {
         perror( "Error deleting file" );
     else
         puts( "File successfully deleted" );
-    notes = mapScoreToString(notes3);
+    string notes = mapScoreToString(notesTwinkle);
+    notes.append("$");
+    cout << "notes " << notes;
     ///*
+    //string pattern = changeStringDeletion(notes, 3);
+    string patternIns = "aabbccbddeeffabbdedeefbebddeefadabbccbddeeffa";
+    string patternSub = "aabeccbddeefffbbddbefbbddeefaabbccbddeeffa";
+    string paternDel = "aabbccbddeeffbbddeefbbddeefaabbccbdeefa";
+    //string notes = "abcdef";
+    //string pattern = "abccdef";
+    cout << endl<< "pattern " << patternIns << endl;
+
     SuffixTree sf;
     if( remove( ".././output.txt" ) != 0 )
         perror( "Error deleting file" );
     else
         puts( "File successfully deleted" );
-    sf.buildTree(notes);
+    sf.buildTree(notes, patternIns);
      //*/
 
-    //changeStringDeletion(notes, 3);
 
     //mapScoreToString(notes2);
 
