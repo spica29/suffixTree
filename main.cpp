@@ -8,6 +8,35 @@
 
 using namespace std;
 
+
+class Changes{
+public:
+    string type;
+    int pos;
+    int positionInString;
+    Changes() {};
+    Changes(string _type, int _pos, int _pos2): type(_type), pos(_pos), positionInString(_pos2) {};
+    Changes(const Changes &c1){
+        type = c1.type;
+        pos = c1.pos;
+        positionInString = c1.positionInString;
+    }
+
+    void operator=(const Changes &c1){
+        type = c1.type;
+        pos = c1.pos;
+        positionInString = c1.positionInString;
+    }
+
+    bool operator==(const Changes& c1){
+        return (c1.type == type && c1.pos == pos && c1.positionInString == positionInString);
+    }
+
+    bool operator<(const Changes& c1){
+        return (c1.positionInString < positionInString);
+    }
+};
+
 class SuffixTree {
     struct Node {
         //list of children
@@ -225,8 +254,9 @@ public:
 
         if (!file) { std::cerr<<"Error writing to ..."<<std::endl; }
         else{
-            file << text << endl;
+            file << text << " ";
         }
+        file << endl;
         file.close();
     }
 
@@ -268,7 +298,7 @@ public:
         delete(n);
     }
 
-    void buildTree(string text, string pattern) {
+    void buildTree(string text, string pattern, vector<Changes> &changesList) {
         rootEnd = new int(0);
         root = new Node();
         root->first = 0;
@@ -297,9 +327,22 @@ public:
         vector<pair <int, float> >frequencyPair;
 
         //first function
-        findStringFirst(c, root, 0, pattern, text);
-        writeInFile("\n", ".././results.txt");
-        findStringSecond(c, root, 0, pattern, frequencyPair, text);
+        vector<Changes> copy1;
+        vector<Changes> copy2;
+        vector<Changes> copy3;
+        for(int i = 0; i < changesList.size(); i++){
+            copy1.emplace_back(changesList[i]);
+            copy2.emplace_back(changesList[i]);
+            copy3.emplace_back(changesList[i]);
+        }
+        findStringFirst(c, root, 0, pattern, text, copy1);
+        writeInFile("\n second: ", ".././results.txt");
+        //sort(changesListLocal.begin(), changesListLocal.end());
+
+        findStringSecond(c, root, 0, pattern, frequencyPair, text, copy2);
+        writeInFile("\n second with filter: ", ".././results.txt");
+        vector<pair <int, float> >frequencyPair1;
+        findStringSecond(c, root, 0, pattern, frequencyPair1, text, copy3, true);
 
 
         //second function
@@ -308,7 +351,7 @@ public:
         //findStringWithPointers(c, listOfCandidates, text);
     }
 
-    void addToTheTable(Node *n, vector<pair<int, float> > &frequencyPairs, int offsetFromRoot, string text, int numberOfCorrect, int &lastMax){
+    void addToTheTable(Node *n, vector<pair<int, float> > &frequencyPairs, int offsetFromRoot, string text, int &lastMax, bool filter){
         //increase values of pair's position (first) by 1
         pair<int, float> *max = nullptr;
         if(frequencyPairs.size() > 0){
@@ -317,15 +360,11 @@ public:
         bool added = false;
         vector<int> suffixIndicesCopy;
         suffixIndicesCopy = n->suffixIndices;
-        //int i = 0;
-        //for(auto &frequencyPair: frequencyPairs){
         for(int i = 0; i < frequencyPairs.size(); i++){
             //erase pair with position bigger than size
-            /*
-            if(frequencyPair.first + 1 > text.size()){
+            if(frequencyPairs[i].first + 1 > text.size()){
                 frequencyPairs.erase(frequencyPairs.begin() + i);
-                continue;
-            }*/
+            }
             //check if returned to the root/mistake happened
             //if true add one more element which is the last maximum in the iteration before coming back to the root
             if(offsetFromRoot == 0 && frequencyPairs.size() > 1 && frequencyPairs[i].first == lastMax && i == 0){
@@ -333,7 +372,6 @@ public:
                 pair<int, float> newPair2 = make_pair(frequencyPairs[i].first + 1, frequencyPairs[i].second);
                 frequencyPairs.insert(frequencyPairs.end(), newPair2);
                 frequencyPairs.insert(frequencyPairs.end(), newPair);
-                //max = &frequencyPair;
                 //cout << "size " << frequencyPairs.size();
                 added = true;
             }
@@ -348,35 +386,21 @@ public:
             }
 
             frequencyPairs[i].first = frequencyPairs[i].first + 1;
+            if(filter) frequencyPairs[i].second = frequencyPairs[i].second * 0.9;
             if(added && i == 0 ) frequencyPairs[i].second += 1;
             //check suffix index to increase frequency value
             for(int j = 0; j < suffixIndicesCopy.size(); j++){
                 if(frequencyPairs[i].first == suffixIndicesCopy[j] + offsetFromRoot){
-                    //frequencyPair.first = n->suffixIndices[i];
                     suffixIndicesCopy.erase(suffixIndicesCopy.begin() + j);
-                    //if(added && i == 0 ) frequencyPair.second += 2;
-                    //else
-                        frequencyPairs[i].second += 1;
+                    frequencyPairs[i].second += 1;
                     break;
                 }
             }
 
             //remember the element with maximum frequency
             if((frequencyPairs[i].second > max->second ||(frequencyPairs[i].second == max->second && frequencyPairs[i].first < max->first))){
-                //if(added && i == 0) continue;
                 max = &frequencyPairs[i];
-                /*
-                if(i == frequencyPairs.size() - 2){
-                    if((frequencyPairs[frequencyPairs.size() - 1].second > max->second ||(frequencyPairs[frequencyPairs.size() - 1].second == max->second && frequencyPairs[frequencyPairs.size() - 1].first < max->first))){
-                        max = &frequencyPairs[frequencyPairs.size() - 1];
-                    }
-                    if((frequencyPairs[frequencyPairs.size() - 2].second > max->second ||(frequencyPairs[frequencyPairs.size() - 2].second == max->second && frequencyPairs[frequencyPairs.size() - 2].first < max->first))){
-                        max = &frequencyPairs[frequencyPairs.size() - 2];
-                    }
-                }
-                 */
             }
-            //i++;
         }
         //move max to the first place
         if(max != nullptr && max != &frequencyPairs[0]){
@@ -390,7 +414,7 @@ public:
         lastMax = frequencyPairs[0].first;
     }
 
-    void findStringFirst(char *currentCharInPattern, Node *n, Node *child, string pattern, string text, int position = 1, int edgeOffset = 0, int offsetFromRoot = 0, int suffixIndexOfEdge = -1, int numberOfCorrect = 0, int min_pos = -1) {
+    void findStringFirst(char *currentCharInPattern, Node *n, Node *child, string pattern, string text, vector<Changes> &changesList, int position = 1, int edgeOffset = 0, int offsetFromRoot = 0, int suffixIndexOfEdge = -1, int numberOfCorrect = 0, int min_pos = -1, int intended = 1, bool mistake = false) {
         bool found = false;
         if(pattern[pattern.size()] == *currentCharInPattern) return;
         for (auto &node: n->children){
@@ -404,13 +428,6 @@ public:
                 }
                 continue;
             }
-            /*
-            if(find(node.second->suffixIndices.begin(), node.second->suffixIndices.end(), suffixIndexOfEdge) == node.second->suffixIndices.end() && suffixIndexOfEdge != -1){
-                //position--; //skip the char
-                //numberOfCorrect--;
-                continue;
-            }
-            */
             else {
                 int suffix = -1;
                 //take the smallest suffix index bigger than position
@@ -424,30 +441,58 @@ public:
                         min_pos = currentPosition;
                     }
                 }
-                //if(*currentCharInPattern == currentCharOnEdge) {
-                    //if(min_pos == -1) //from this char can't be continued, but will still try to predict
-
                 found = true;
-                numberOfCorrect++;
-                cout << " char in pattern: " << *currentCharInPattern << " char in pattern position: " << position
+                if(n != root || position == 1)
+                    numberOfCorrect++;
+/*
+                bool increased = false;
+                if(mistake){
+                    mistake = false;
+                } else {
+                    increased = true;
+                }
+                for(int i = 0; i < changesList.size(); i++){
+                    if(changesList[i].positionInString == intended && increased){
+                        mistake = true;
+                        break;
+                    }
+                }
+                */
+                bool increased = false;
+                if(mistake){
+                    mistake = false;
+                } else {
+                    increased = true;
+                }
+                while(((changesList[0].positionInString == intended && changesList[0].type == "del")
+                   || (increased && changesList[0].positionInString == intended && changesList[0].type == "add"))
+                      && changesList.size() > 0){
+                    mistake = true;
+                    if(changesList[0].type == "del") intended++;
+                    changesList.erase(changesList.begin());
+                }
+
+                cout << " char in pattern: " << *currentCharInPattern << " indended: " << intended << " char in pattern position: " << position
                      << ", predicted char position: " << min_pos << endl;
                 //cout <<"next char in pattern position: " << position + 1 << ", predicted char position: " << min_pos << endl;
-                //int difference = min_pos - position;
+                int difference = min_pos - intended;
                 string fullname = ".././results.txt";
-                writeInFile(std::to_string(min_pos), fullname);
-                //cout << " char in pattern: " << *currentCharInPattern << ", predicted char: " << text[node.second->first + edgeOffset] << endl;
+                if(difference != 0)
+                    writeInFile(std::to_string(difference), fullname);
+
+                if(!mistake || changesList[0].type == "del") intended++;
+
+
                 currentCharInPattern++;
                 //if all chars on the edge are examined go to the child node
                 if (node.second->first - 1 + edgeOffset == *node.second->last - 1) {
-                    findStringFirst(currentCharInPattern, node.second, 0, pattern, text, position + 1, 0,
-                                    offsetFromRoot + 1, suffix, numberOfCorrect, min_pos);
+                    findStringFirst(currentCharInPattern, node.second, 0, pattern, text, changesList, position + 1, 0, offsetFromRoot + 1, suffix, numberOfCorrect, min_pos, intended, mistake);
                     break;
                 }
                     //if not, continue examining char on the edge
                 else {
                     edgeOffset++;
-                    findStringFirst(currentCharInPattern, n, node.second, pattern, text, position + 1, edgeOffset,
-                                    offsetFromRoot + 1, suffix, numberOfCorrect, min_pos);
+                    findStringFirst(currentCharInPattern, n, node.second, pattern, text, changesList, position + 1, edgeOffset, offsetFromRoot + 1, suffix, numberOfCorrect, min_pos, intended, mistake);
                     break;
                     //}
                 }
@@ -460,19 +505,19 @@ public:
                 if(min_pos == -1)
                     min_pos = 1;
                 else min_pos = min_pos + 1;
-                cout << " char in pattern: " << *currentCharInPattern << " char in pattern position: " << position << ", predicted char position: " << min_pos << endl;
+                cout << " char in pattern: " << *currentCharInPattern << " intended" << intended << " char in pattern position: " << position << ", predicted char position: " << min_pos << endl;
                 //cout <<"next char in pattern position: " << position + 1 << ", predicted char position: " << min_pos << endl;
-                int difference = min_pos - position;
+                int difference = min_pos - intended;
                 string fullname = ".././results.txt";
                 writeInFile(std::to_string(difference), fullname);
                 currentCharInPattern++;
                 position++;
             }
-            findStringFirst(currentCharInPattern, root, 0, pattern, text, position, 0, 0, -1, numberOfCorrect, min_pos);
+            findStringFirst(currentCharInPattern, root, 0, pattern, text, changesList, position, 0, 0, -1, numberOfCorrect, min_pos, intended, mistake);
         }
     }
 
-    void findStringSecond(char *currentCharInPattern, Node *n, Node *child, string pattern, vector<pair<int, float> > &frequencyPairs, string text, int position = 1, int offsetFromRoot = 0, int edgeOffset = 0, int numberOfCorrect = 0, int lastMax = -1) {
+    void findStringSecond(char *currentCharInPattern, Node *n, Node *child, string pattern, vector<pair<int, float> > &frequencyPairs, string text, vector<Changes> &changesList, bool filter = false, int position = 1, int offsetFromRoot = 0, int edgeOffset = 0, int lastMax = -1, int intended = 1, bool mistake = false) {
         bool found = false;
         if(pattern[pattern.size()] == *currentCharInPattern) return;
         for (auto &node: n->children){
@@ -488,30 +533,44 @@ public:
             }
             else {
                 found = true;
-                numberOfCorrect++;
-                addToTheTable(node.second, frequencyPairs, offsetFromRoot, text, numberOfCorrect, lastMax);
+                addToTheTable(node.second, frequencyPairs, offsetFromRoot, text, lastMax, filter);
                 int max = frequencyPairs[0].first;
-                //cout << " char in pattern: " << *currentCharInPattern << " char in pattern position: " << position << ", predicted char position: " << max << endl;
-                cout <<"next char in pattern position: " << position << ", predicted char position: " << max << endl;
-                //int difference = max - position;
+
+                bool increased = false;
+                if(mistake){
+                    mistake = false;
+                } else {
+                    increased = true;
+                }
+                while(((changesList[0].positionInString == intended && changesList[0].type == "del")
+                   || (increased && changesList[0].positionInString == intended && changesList[0].type == "add"))
+                        && changesList.size() > 0){
+                    mistake = true;
+                    if(changesList[0].type == "del") intended++;
+                    changesList.erase(changesList.begin());
+                }
+                cout <<"next char in pattern position: " << position << ", intended position: " << intended <<"predicted char position: " << max << endl;
+                int difference = max - intended;
                 string fullname = ".././results.txt";
-                writeInFile(std::to_string(max), fullname);
-                //cout << " char in pattern: " << *currentCharInPattern << " max position: " << max << ", predicted char: " << text[max] << endl;
+                if(difference != 0)
+                    writeInFile(std::to_string(difference), fullname);
+
+                if(!mistake || changesList[0].type == "del" || changesList[0].type == "rep") intended++;
+
                 currentCharInPattern++;
                 //if all chars on the edge are examined go to the child node
                 if(node.second->first - 1 + edgeOffset == *node.second->last - 1){
-                    findStringSecond(currentCharInPattern, node.second, 0, pattern, frequencyPairs, text, position + 1, offsetFromRoot + 1, 0, numberOfCorrect, lastMax);
+                    findStringSecond(currentCharInPattern, node.second, 0, pattern, frequencyPairs, text, changesList, filter, position + 1, offsetFromRoot + 1, 0, lastMax, intended, mistake);
                     break;
                 }
                 //if not, continue examining char on the edge
                 else {
                     edgeOffset++;
                     child = node.second;
-                    findStringSecond(currentCharInPattern, n, child, pattern, frequencyPairs, text, position + 1, offsetFromRoot + 1, edgeOffset, numberOfCorrect, lastMax);
+                    findStringSecond(currentCharInPattern, n, child, pattern, frequencyPairs, text, changesList, filter, position + 1, offsetFromRoot + 1, edgeOffset, lastMax, intended, mistake);
                     break;
                 }
             }
-
         }
 
         //check case when char from pattern is not in the alphabet
@@ -523,13 +582,13 @@ public:
                 }
                 else max = frequencyPairs[0].first;
                 cout <<"next char in pattern position: " << position << ", predicted char position: " << max + 1 << endl;
-                int difference = max - position;
+                int difference = max - intended;
                 string fullname = ".././results.txt";
                 writeInFile(std::to_string(difference), fullname);
                 currentCharInPattern++;
                 position++;
             }
-            findStringSecond(currentCharInPattern, root, 0, pattern, frequencyPairs, text, position, 0, 0, numberOfCorrect, lastMax);
+            findStringSecond(currentCharInPattern, root, 0, pattern, frequencyPairs, text, changesList, filter, position, 0, 0, lastMax, intended, mistake);
         }
     }
 
@@ -583,38 +642,106 @@ public:
 
 };
 
-//insert k chars at random positions
-string changeStringAddition(string pattern, int k){
+string changeStringAll(string pattern, int k, vector<Changes> &changesList){
     srand((int)time(0));
+    vector<int> numbers;
+    vector<string> operations;
     for (int i = 0; i < k; i++) {
         int randNum = rand() % pattern.size();
+        while(randNum == 0) randNum = rand() % pattern.size();
+        while((find(numbers.begin(), numbers.end(), randNum) != numbers.end()))
+            randNum = rand() % pattern.size();
+        numbers.emplace_back(randNum);
+
+        //add random operation
+        int randOper = rand()%3;
+        if(randOper == 0) operations.emplace_back("add");
+        else if(randOper == 1) operations.emplace_back("rep");
+        else if(randOper == 2) operations.emplace_back("del");
+        changesList.emplace_back(operations[i], i, numbers[i] - 1 + 1);
+    }
+    sort(numbers.begin(), numbers.end());
+
+    for(int i = numbers.size() - 1; i >= 0; i--){
+        int randPosForLetter = rand() % pattern.size();
+        if(operations[i] == "add"){
+            char letter = pattern[randPosForLetter];
+            pattern.insert(numbers[i] - 1, 1, letter);
+        } else if(operations[i] == "rep"){
+            char letter = pattern[randPosForLetter];
+            pattern.replace(numbers[i] - 1, 1, string(1, letter));
+        } else if (operations[i] == "del"){
+            pattern.erase(numbers[i] - 1, 1);
+        }
+    }
+}
+
+//insert k chars at random positions
+string changeStringAddition(string pattern, int k, vector<Changes> &changesList){
+    srand((int)time(0));
+    vector<int> numbers;
+    for (int i = 0; i < k; i++) {
+        int randNum = rand() % pattern.size();
+        while(randNum == 0) randNum = rand() % pattern.size();
+        while((find(numbers.begin(), numbers.end(), randNum) != numbers.end()))
+            randNum = rand() % pattern.size();
+        numbers.emplace_back(randNum);
+    }
+
+    sort(numbers.begin(), numbers.end());
+
+    for(int i = 0; i < numbers.size(); i++)
+        changesList.emplace_back("add", i, numbers[i]);
+
+    for(int i = numbers.size() - 1; i >= 0; i--){
+        cout << "added " << numbers[i] << endl;
         int randPosForLetter = rand() % pattern.size();
         char letter = pattern[randPosForLetter];
-        pattern.insert(randNum, 1, letter);
+        pattern.insert(numbers[i] - 1, 1, letter);
     }
+
+    //insert 1
+    //changes.emplace_back("add", k, 1);
+    //pattern.insert(1, 1, 'c');
 
     cout << "pattern is : " << pattern << endl;
     return pattern;
 }
 
-string changeStringSubstitution(string pattern, int k){
+string changeStringSubstitution(string pattern, int k, vector<Changes> &changesList){
     srand((int)time(0));
     for (int i = 0; i < k; i++) {
         int randNum = rand() % pattern.size();
         int randPosForLetter = rand() % pattern.size();
+        cout << "letter substitution at " << randNum;
         char letter = pattern[randPosForLetter];
         pattern.replace(randNum, 1, string(1, letter));
+        changesList.emplace_back("rep", i, randNum + 1);
     }
 
     cout << "pattern is : " << pattern << endl;
     return pattern;
 }
 
-string changeStringDeletion(string pattern, int k){
+string changeStringDeletion(string pattern, int k, vector<Changes> &changesList){
     srand((int)time(0));
+    vector<int> numbers;
     for (int i = 0; i < k; i++) {
         int randNum = rand() % pattern.size();
-        pattern.erase(randNum, 1);
+        while(randNum == 0) randNum = rand() % pattern.size();
+        while((find(numbers.begin(), numbers.end(), randNum) != numbers.end()))
+                randNum = rand() % pattern.size();
+        numbers.emplace_back(randNum);
+    }
+
+    sort(numbers.begin(), numbers.end());
+
+    for(int i = 0; i < numbers.size(); i++)
+        changesList.emplace_back("del", i, numbers[i]);
+
+    for(int i = numbers.size() - 1; i >= 0; i--){
+        cout << "deleted " << numbers[i] << endl;
+        pattern.erase(numbers[i] - 1, 1);
     }
 
     cout << "pattern is : " << pattern << endl;
@@ -643,9 +770,9 @@ string mapScoreToString(string score){
     return scoreShorten;
 }
 
-//string notes = "abcabaxabcd";
+string notes1 = "abcabaxabcd";
 
-//string notes2 = "d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.c5#c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.e5.d5.c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.c5#c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.e5.d5.c5#b4.f4#g4.f4#a4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.d4.f4#a4.d4.f4#g4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#e4.e4.d4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#g4.a4.d4.f4#a4.d4.f4#g4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#e4.d4.f4#g4.f4#e4.d4.f4#a4.d4.f4#a4.d4.f4#g4.f4#e4.e4.d4.f4#g4.f4#e4.a1.d4.a4.a1.d4.a4.a1.d4.g4.a1.d4.g4.a1.d4.f4#a1.d4.f4#a1.d4.g4.a1.d4.d5.d4.a4.d5.d4.a4.d5.d4.g4.d5.d4.g4.d5.d4.f4#d5.d4.f4#d5.d4.g4.d5.d4.g4.d5.f4#a4.d5.f4#a4.d5.e4.g4.d5.e4.g4.d5.d4.f4#d5.d4.f4#d5.d4.g4.d5.d4.g4.d5.f4#d5.f4#d5.f4#d5.e4.d5.e4.d5.e4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.f5#b4.g5.a5.c5#d5.b5.f5#e5.a5.c5#d5.b5.f5#e5.d5.c5#a4.f5#b4.g5.a5.c5#d5.b4.b4.d4.d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.c5#d5.d5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.e5.d5.d5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.f5#a5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.d5.d5.f5#g5.f5#e5.d5.f5#a5.a5.f5#g5.f5#e5.d5.d5.f5#g5.f5#e5.a5.a4.d5.a5.a4.d5.a5.a4.d5.g5.a4.d5.g5.a4.d5.f5#a4.d5.f5#g4.a4.d5.g4.a4.a5.a4.d5.a5.a4.d5.a5.a4.d5.g5.a4.d5.g5.a4.d5.f5#a4.d5.f5#a4.d5.g5.a4.d5.d6.d5.a5.d6.d5.g5.d6.d5.g5.d6.d5.f5#d6.d5.f5#d6.d5.g5.d6.d5.g5.d6.d5.a5.d6.d5.a5.d6.d5.g5.d6.d5.g5.d6.d5.f5#d6.d5.f5#d6.d5.g5.d6.d5.g5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d5.";
+string notes2 = "d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.c5#c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.e5.d5.c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.c5#c5#b4.d5.c5#d5.d4.d5.c5#d5.c4#e5.d5.e5.d5.c5#b4.f4#g4.f4#a4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.d4.f4#a4.d4.f4#g4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#e4.e4.d4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#g4.a4.d4.f4#a4.d4.f4#g4.f4#g4.f4#g4.a4.f4#g4.f4#g4.a4.b4.a4.g4.f4#e4.d4.f4#g4.f4#e4.d4.f4#a4.d4.f4#a4.d4.f4#g4.f4#e4.e4.d4.f4#g4.f4#e4.a1.d4.a4.a1.d4.a4.a1.d4.g4.a1.d4.g4.a1.d4.f4#a1.d4.f4#a1.d4.g4.a1.d4.d5.d4.a4.d5.d4.a4.d5.d4.g4.d5.d4.g4.d5.d4.f4#d5.d4.f4#d5.d4.g4.d5.d4.g4.d5.f4#a4.d5.f4#a4.d5.e4.g4.d5.e4.g4.d5.d4.f4#d5.d4.f4#d5.d4.g4.d5.d4.g4.d5.f4#d5.f4#d5.f4#d5.e4.d5.e4.d5.e4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.d4.d5.f5#b4.g5.a5.c5#d5.b5.f5#e5.a5.c5#d5.b5.f5#e5.d5.c5#a4.f5#b4.g5.a5.c5#d5.b4.b4.d4.d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.c5#d5.d5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.e5.d5.d5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.f5#a5.a5.f5#g5.f5#g5.a5.f5#g5.f5#g5.a5.b5.a5.g5.f5#e5.d5.d5.f5#g5.f5#e5.d5.f5#a5.a5.f5#g5.f5#e5.d5.d5.f5#g5.f5#e5.a5.a4.d5.a5.a4.d5.a5.a4.d5.g5.a4.d5.g5.a4.d5.f5#a4.d5.f5#g4.a4.d5.g4.a4.a5.a4.d5.a5.a4.d5.a5.a4.d5.g5.a4.d5.g5.a4.d5.f5#a4.d5.f5#a4.d5.g5.a4.d5.d6.d5.a5.d6.d5.g5.d6.d5.g5.d6.d5.f5#d6.d5.f5#d6.d5.g5.d6.d5.g5.d6.d5.a5.d6.d5.a5.d6.d5.g5.d6.d5.g5.d6.d5.f5#d6.d5.f5#d6.d5.g5.d6.d5.g5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d6.d5.d5.";
 
 //string notes3 = "d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#b4.d5.e5.f5#e5.e5.f5#e5.d5.d5.e5.f5#e5.a5.a5.d5.b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.c5#d5.c5#e5.d5.c5#";
 
@@ -658,24 +785,41 @@ int main() {
         perror( "Error deleting file" );
     else
         puts( "File successfully deleted" );
-    string notes = mapScoreToString(notesTwinkle);
+    string notes = mapScoreToString(notes2);
+    //string notes = mapScoreToString(notesTwinkle);
     notes.append("$");
-    cout << "notes " << notes;
+    //cout << "notes " << notes2;
     ///*
-    //string pattern = changeStringDeletion(notes, 3);
+    vector<Changes> changesList;
+    string pattern = changeStringAddition(notes, 10, changesList);
+    //pattern = pattern.substr(300, pattern.size()-1);
     string patternIns = "aabbccbddeeffabbdedeefbebddeefadabbccbddeeffa";
+    string patternIns2 = "aabbccbdddeeffabbddeefbbddeefaabbccdcbddeeffa";
+    string patternIns3 = "aabbccbddeeeffdabbddeefbbdbdeefaabbccbddeeffa";
+    string patternIns4 = "aabbccbddeeffabbddeefbddbddedefaabbccbddeeffa";
+    string patternIns5 = "aabbccbddedeffabbddeefbbddeefaabbeccbddeecffa";
+
     string patternSub = "aabeccbddeefffbbddbefbbddeefaabbccbddeeffa";
+    string patternSub2 = "aabbccbddeeffabbddeefebddeefaebbccbddeeffa";
+    string patternSub3 = "aabbccbddeeffabbddeefbbddeebfabbccbddeeffa";
+    string patternSub4 = "aabbccbddebffabbddeefbbbdeefaabbccbddeeffa";
+    string patternSub5 = "aabbccbddeeffabbddeefbeddeefaabbecbddeeffa";
+
     string paternDel = "aabbccbddeeffbbddeefbbddeefaabbccbdeefa";
-    //string notes = "abcdef";
-    //string pattern = "abccdef";
-    cout << endl<< "pattern " << patternIns << endl;
+    string patternDel2 = "abbccbdeeffabbddeebbddeefaabbccbddeeffa";
+    string patternDel3 = "aabbccbddeeffabbddefbbddeaabbccbddeeffa";
+    string patternDel4 = "aabbccbdeeffabbddeefbbddeeaabbccbddeffa";
+    string patternDel5 = "aabbccbddeeffabbddeefddeefaabbccbddeffa";
+    //string notes2 = "abcabaxabcd$";
+    //string pattern2 = "abdabaxabcd";
+    cout << endl<< "pattern " << pattern << endl;
 
     SuffixTree sf;
     if( remove( ".././output.txt" ) != 0 )
         perror( "Error deleting file" );
     else
         puts( "File successfully deleted" );
-    sf.buildTree(notes, patternIns);
+    sf.buildTree(notes, pattern, changesList);
      //*/
 
 
