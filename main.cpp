@@ -8,6 +8,7 @@
 
 using namespace std;
 
+int rand1, rand2;
 
 class Changes{
 public:
@@ -430,7 +431,7 @@ public:
             }
             else {
                 int suffix = -1;
-                //take the smallest suffix index bigger than position
+                //take the smallest suffix index bigger than number of correct notes
                 for(int i = 0; i < node.second->suffixIndices.size(); i++){
                     suffix = node.second->suffixIndices[i];
                     int currentPosition = suffix + offsetFromRoot;
@@ -444,20 +445,7 @@ public:
                 found = true;
                 if(n != root || position == 1)
                     numberOfCorrect++;
-/*
-                bool increased = false;
-                if(mistake){
-                    mistake = false;
-                } else {
-                    increased = true;
-                }
-                for(int i = 0; i < changesList.size(); i++){
-                    if(changesList[i].positionInString == intended && increased){
-                        mistake = true;
-                        break;
-                    }
-                }
-                */
+
                 bool increased = false;
                 if(mistake){
                     mistake = false;
@@ -480,8 +468,10 @@ public:
                 if(difference != 0)
                     writeInFile(std::to_string(difference), fullname);
 
-                if(!mistake || changesList[0].type == "del") intended++;
-
+                if(!mistake || changesList[0].type == "del") {
+                    intended++;
+                    if(intended == rand1) intended = rand2;
+                }
 
                 currentCharInPattern++;
                 //if all chars on the edge are examined go to the child node
@@ -555,7 +545,11 @@ public:
                 if(difference != 0)
                     writeInFile(std::to_string(difference), fullname);
 
-                if(!mistake || changesList[0].type == "del" || changesList[0].type == "rep") intended++;
+                if(!mistake || changesList[0].type == "del" || changesList[0].type == "rep") {
+                    intended++;
+                    if(intended == rand1) intended = rand2;
+                }
+
 
                 currentCharInPattern++;
                 //if all chars on the edge are examined go to the child node
@@ -679,6 +673,8 @@ string changeStringAll(string pattern, int k, vector<Changes> &changesList){
 //insert k chars at random positions
 string changeStringAddition(string pattern, int k, vector<Changes> &changesList){
     srand((int)time(0));
+    //pattern = pattern.substr(0, 300) + pattern.substr(500, pattern.size());
+    //pattern = pattern.substr(0, 15) + pattern.substr(30, pattern.size());
     vector<int> numbers;
     for (int i = 0; i < k; i++) {
         int randNum = rand() % pattern.size();
@@ -690,9 +686,13 @@ string changeStringAddition(string pattern, int k, vector<Changes> &changesList)
 
     sort(numbers.begin(), numbers.end());
 
-    for(int i = 0; i < numbers.size(); i++)
-        changesList.emplace_back("add", i, numbers[i]);
-
+    for(int i = 0; i < numbers.size(); i++){
+        int randomPosition = numbers[i];
+        if(numbers[i] > rand1) {
+            randomPosition += rand2 - rand1;
+        }
+        changesList.emplace_back("add", i, randomPosition);
+    }
     for(int i = numbers.size() - 1; i >= 0; i--){
         cout << "added " << numbers[i] << endl;
         int randPosForLetter = rand() % pattern.size();
@@ -716,7 +716,12 @@ string changeStringSubstitution(string pattern, int k, vector<Changes> &changesL
         cout << "letter substitution at " << randNum;
         char letter = pattern[randPosForLetter];
         pattern.replace(randNum, 1, string(1, letter));
-        changesList.emplace_back("rep", i, randNum + 1);
+        int randomPosition = randNum + 1;
+        if(randomPosition > rand1) {
+            randomPosition += rand2 - rand1;
+        }
+        //changesList.emplace_back("add", i, randomPosition);
+        changesList.emplace_back("rep", i, randomPosition);
     }
 
     cout << "pattern is : " << pattern << endl;
@@ -736,8 +741,13 @@ string changeStringDeletion(string pattern, int k, vector<Changes> &changesList)
 
     sort(numbers.begin(), numbers.end());
 
-    for(int i = 0; i < numbers.size(); i++)
-        changesList.emplace_back("del", i, numbers[i]);
+    for(int i = 0; i < numbers.size(); i++){
+        int randomPosition = numbers[i];
+        if(numbers[i] > rand1) {
+            randomPosition += rand2 - rand1;
+        }
+        changesList.emplace_back("del", i, randomPosition);
+    }
 
     for(int i = numbers.size() - 1; i >= 0; i--){
         cout << "deleted " << numbers[i] << endl;
@@ -779,6 +789,8 @@ string notes2 = "d5.c5#c5#b4.b4.c5#d5.c5#b4.c5#b4.c5#d5.c5#c5#d5.c5#d5.c5#b4.b4.
 string notesTwinkle = "c4.c4.g4.g4.a4.a4.g4.f4.f4.e4.e4.d4.d4.c4.g4.g4.f4.f4.e4.e4.d4.g4.g4.f4.f4.e4.e4.d4.c4.c4.g4.g4.a4.a4.g4.f4.f4.e4.e4.d4.d4.c4.";
 
 int main() {
+
+
     cout << "Hello, World!" << endl;
     string fullname = ".././results.txt";
     if( remove(fullname.c_str()) != 0 )
@@ -788,10 +800,17 @@ int main() {
     string notes = mapScoreToString(notes2);
     //string notes = mapScoreToString(notesTwinkle);
     notes.append("$");
-    //cout << "notes " << notes2;
+    cout << "notes " << notes;
+    srand((int)time(0));
+    rand1 = rand()%(300 - 100 + 1) + 100;
+    rand2 = rand()%(notes.size() - 400 + 1) + 400;
+    cout << endl << " notes size" << notes.size() << endl;
+    cout << endl << "first rand " << rand1 << " second rand " << rand2 << endl;
     ///*
+    string pattern = notes.substr(0, rand1) + notes.substr(rand2, notes.size());
+    cout << "pattern substring " << pattern << endl;
     vector<Changes> changesList;
-    string pattern = changeStringAddition(notes, 10, changesList);
+    pattern = changeStringDeletion(pattern, 3, changesList);
     //pattern = pattern.substr(300, pattern.size()-1);
     string patternIns = "aabbccbddeeffabbdedeefbebddeefadabbccbddeeffa";
     string patternIns2 = "aabbccbdddeeffabbddeefbbddeefaabbccdcbddeeffa";
